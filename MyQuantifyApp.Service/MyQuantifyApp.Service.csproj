@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+	  <PropertyGroup>
+		    <TargetFramework>net8.0-windows</TargetFramework>
+		    <Nullable>enable</Nullable>
+		    <ImplicitUsings>enable</ImplicitUsings>
+		    <UserSecretsId>dotnet-MyQuantifyApp.Service-b6c799e0-9b73-4f92-9eb4-84dee503db79</UserSecretsId>
+		 
+	</PropertyGroup>
+
+	  <ItemGroup>
+		    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" /><PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.1" />
+
+		 
+	</ItemGroup>
+
+	  <ItemGroup>
+		    <ProjectReference Include="..\MyQuantifyApp.DataCollector\MyQuantifyApp.DataCollector.csproj" />
+		 
+	</ItemGroup>
+</Project>

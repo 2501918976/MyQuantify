@@ -1,5 +1,8 @@
-﻿using MyQuantifyApp.ViewModels;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -10,17 +13,16 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-namespace MyQuantifyApp
+namespace MyQuantifyApp.Views
 {
     /// <summary>
-    /// Interaction logic for MainWindow.xaml
+    /// SettingsView.xaml 的交互逻辑
     /// </summary>
-    public partial class MainWindow : Window
+    public partial class SettingsView : Page
     {
-        public MainWindow()
+        public SettingsView()
         {
             InitializeComponent();
-            DataContext = new MainViewModel();
         }
     }
 }

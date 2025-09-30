@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>专注模式页面</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <style>
+        /* 基础重置和背景 */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f7f6; /* 轻柔的背景色 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh; /* 保证至少占满视窗高度 */
+        }
+
+        /* 主容器：固定 1200x700 尺寸 */
+        .focus-container {
+            width: 1200px;
+            height: 700px;
+            display: flex;
+            flex-direction: column; /* 垂直堆叠上下两部分 */
+            background-color: #ffffff;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            overflow: hidden; /* 防止子元素溢出 */
+        }
+
+        /* 1. 上部分：高 600px */
+        .top-section {
+            height: 600px;
+            display: flex; /* 使用 Flexbox 实现左右划分 */
+            padding: 20px;
+            gap: 20px;
+        }
+
+        /* 2. 下部分：高 100px */
+        .bottom-section {
+            height: 100px;
+            padding: 0 20px 20px 20px; /* 调整内边距，底部留白 */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        /* --- 左右两侧通用样式 --- */
+        .panel {
+            flex: 1; /* 左右两边平分空间 */
+            background-color: #fcfcfc;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            padding: 30px;
+            text-align: center;
+        }
+        
+        /* --- 左侧：时钟/沙漏 --- */
+        .timer-panel {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .timer-icon {
+            font-size: 60px;
+            color: #3498DB;
+            margin-bottom: 30px;
+        }
+
+        .time-display {
+            font-size: 120px;
+            font-weight: 700;
+            color: #2C3E50;
+            letter-spacing: 5px;
+        }
+        
+        .status-text {
+            font-size: 24px;
+            color: #7F8C8D;
+            margin-top: 10px;
+        }
+
+        /* --- 右侧：设置区域 --- */
+        .settings-panel {
+            text-align: left;
+            overflow-y: auto; /* 允许滚动 */
+        }
+
+        .settings-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #34495E;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .setting-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        select, input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #DCDCDC;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+            margin-top: 5px;
+        }
+        
+        .start-button {
+            width: 100%;
+            padding: 15px;
+            background-color: #2ECC71;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 20px;
+        }
+
+        .start-button:hover {
+            background-color: #27AE60;
+        }
+
+        /* --- 底部：进度条 --- */
+        .progress-title {
+            font-size: 16px;
+            color: #555;
+            margin-bottom: 8px;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 15px;
+            background-color: #ECF0F1;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 50%; /* 示例进度，将在 JS 中更新 */
+            background-color: #3498DB;
+            border-radius: 8px;
+            transition: width 0.5s;
+        }
+
+        /* 任务和行为标记 */
+        .task-markers {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .marker {
+            position: absolute;
+            height: 150%; /* 略高于进度条 */
+            width: 4px;
+            background-color: #E74C3C; /* 默认红色标记 */
+            transform: translateY(-25%);
+            border-radius: 2px;
+            /* 示例标记位置，需要在 JS 中动态计算 left 值 */
+        }
+    </style>
+</head>
+<body>
+
+    <div class="focus-container">
+        
+        <div class="top-section">
+            
+            <div class="panel timer-panel">
+                <i class="fas fa-hourglass-half timer-icon"></i>
+                <div id="currentTime" class="time-display">00:00:00</div>
+                <div id="timerStatus" class="status-text">专注计时已停止</div>
+            </div>
+
+            <div class="panel settings-panel">
+                <div class="settings-title">专注模式设置</div>
+                
+                <div class="setting-group">
+                    <label for="mode-select">选择模式</label>
+                    <select id="mode-select">
+                        <option value="pomodoro">番茄工作法 (25/5)</option>
+                        <option value="deep-work">深度工作 (90/15)</option>
+                        <option value="break">休息模式</option>
+                        <option value="custom">自定义模式</option>
+                    </select>
+                </div>
+
+                <div class="setting-group">
+                    <label for="task-input">当前专注任务</label>
+                    <input type="text" id="task-input" value="编写新的前端布局代码">
+                </div>
+
+                <div class="setting-group">
+                    <label for="duration-input">专注时长 (分钟)</label>
+                    <input type="number" id="duration-input" value="25" min="1" max="180">
+                </div>
+                
+                <button class="start-button" id="startButton">
+                    <i class="fas fa-play"></i> 开始专注
+                </button>
+            </div>
+            
+        </div>
+
+        <div class="bottom-section">
+            <div class="progress-title" id="progressTitle">任务时间轴 (当前任务时长: 25分钟)</div>
+            
+            <div class="progress-bar-container">
+                <div class="progress-fill" id="progressBarFill" style="width: 0%;"></div>
+                
+                <div class="task-markers" id="taskMarkers">
+                    <div class="marker" style="left: 20%; background-color: #F1C40F;" title="分心/聊天 (5分钟)"></div>
+                    <div class="marker" style="left: 75%; background-color: #9B59B6;" title="小休息 (2分钟)"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // JavaScript 示例：用于更新时间和进度
+        document.addEventListener('DOMContentLoaded', () => {
+            const timeDisplay = document.getElementById('currentTime');
+            const statusText = document.getElementById('timerStatus');
+            const progressBarFill = document.getElementById('progressBarFill');
+            const startButton = document.getElementById('startButton');
+
+            let isRunning = false;
+            let totalDuration = 25 * 60; // 默认 25 分钟，以秒为单位
+            let remainingTime = totalDuration;
+            let timerInterval;
+
+            function updateDisplay() {
+                const h = Math.floor(remainingTime / 3600);
+                const m = Math.floor((remainingTime % 3600) / 60);
+                const s = remainingTime % 60;
+                
+                timeDisplay.textContent = 
+                    `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                
+                // 更新进度条
+                const progressPercent = ((totalDuration - remainingTime) / totalDuration) * 100;
+                progressBarFill.style.width = `${progressPercent.toFixed(2)}%`;
+
+                if (remainingTime <= 0) {
+                    stopTimer();
+                    statusText.textContent = "✅ 专注完成！";
+                    alert("专注时间到！");
+                }
+            }
+
+            function startTimer() {
+                if (isRunning) return;
+
+                const durationInput = document.getElementById('duration-input');
+                totalDuration = parseInt(durationInput.value) * 60;
+                remainingTime = totalDuration;
+
+                isRunning = true;
+                statusText.textContent = "🚀 正在专注...";
+                startButton.innerHTML = '<i class="fas fa-pause"></i> 暂停专注';
+                startButton.style.backgroundColor = '#E74C3C'; // 暂停按钮变为红色
+
+                timerInterval = setInterval(() => {
+                    remainingTime--;
+                    updateDisplay();
+                }, 1000);
+            }
+
+            function stopTimer() {
+                clearInterval(timerInterval);
+                isRunning = false;
+                statusText.textContent = "⏸️ 专注已暂停";
+                startButton.innerHTML = '<i class="fas fa-play"></i> 继续专注';
+                startButton.style.backgroundColor = '#3498DB'; // 继续按钮变为蓝色
+            }
+            
+            // 绑定按钮事件
+            startButton.addEventListener('click', () => {
+                if (isRunning) {
+                    stopTimer();
+                } else {
+                    startTimer();
+                }
+            });
+            
+            // 初始化显示
+            updateDisplay();
+        });
+    </script>
+</body>
+</html>

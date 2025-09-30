@@ -3,10 +3,73 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:hc="https://handyorg.github.io/handycontrol"
         xmlns:local="clr-namespace:MyQuantifyApp"
         mc:Ignorable="d"
         Title="MainWindow" Height="800" Width="1200">
+    <!-- 主布局 Grid: 上 (Header), 中 (Content) -->
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="50"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- ============================== 上部 Header ============================== -->
+        <Grid Grid.Row="0">
+            <!-- 蓝色背景 -->
+            <Border Background="#12BDCF" />
+
+            <!-- 左右布局：左边按钮，右边 Logo -->
+            <Grid Margin="20,0,20,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <!-- 左边按钮 -->
+                    <ColumnDefinition Width="Auto"/>
+                    <!-- 右边 Logo -->
+                </Grid.ColumnDefinitions>
+
+                <!-- 左边按钮组：使用 Margin 属性增加按钮间距 -->
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Grid.Column="0" HorizontalAlignment="Left">
+
+                    <Button Content="专注" Background="#12BDCF" Foreground="White" hc:BorderElement.CornerRadius="15"
+                        Margin="0,0,15,0"
+                        Command="{Binding ShowPageCommand}"
+                        CommandParameter="FocusView"/>
+
+                    <Button Content="今日数据" Background="#12BDCF" Foreground="White" hc:BorderElement.CornerRadius="15"
+                        Margin="0,0,15,0"
+                        Command="{Binding ShowPageCommand}"
+                        CommandParameter="DailyReportView"/>
+
+                    <Button Content="本周数据" Background="#12BDCF" Foreground="White" hc:BorderElement.CornerRadius="15"
+                        Margin="0,0,15,0"
+                        Command="{Binding ShowPageCommand}"
+                        CommandParameter="WeeklyReportView"/>
+
+                    <Button Content="本月数据" Background="#12BDCF" Foreground="White" hc:BorderElement.CornerRadius="15"
+                        Margin="0,0,15,0"
+                        Command="{Binding ShowPageCommand}"
+                        CommandParameter="MonthlyReportView"/>
+
+                    <Button Content="设置" Background="#12BDCF" Foreground="White" hc:BorderElement.CornerRadius="15"
+                        Command="{Binding ShowPageCommand}"
+                        CommandParameter="SettingsView"/>
+
+                </StackPanel>
+
+
+                <!-- 右边 Logo 和标题 -->
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Grid.Column="1" HorizontalAlignment="Right">
+                    <Border Width="30" Height="30" CornerRadius="5" Background="#80D0F0" VerticalAlignment="Center"/>
+                    <!-- 保持应用标题一致性 -->
+                    <TextBlock Text="Discipline Engine" Margin="10,0,0,0" Foreground="White" FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
+
+        <!-- ============================== 中部 Content ============================== -->
+        <!-- 关键修改：移除 x:Name 并绑定 Content="{Binding CurrentPage}" -->
+        <Frame Content="{Binding CurrentPage}" Grid.Row="1" Margin="10" Background="#F5F5F5" NavigationUIVisibility="Hidden"/>
 
     </Grid>
 </Window>

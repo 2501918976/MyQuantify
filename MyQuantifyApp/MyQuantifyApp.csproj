@@ -9,14 +9,51 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="assets\pic\Afk.png" />
+    <None Remove="assets\pic\Copy.png" />
+    <None Remove="assets\pic\Focus.png" />
+    <None Remove="assets\pic\Game.png" />
+    <None Remove="assets\pic\Keyboard.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="assets\html\" />
     <Folder Include="Services\" />
     <Folder Include="Utilities\Converters\" />
-    <Folder Include="ViewModels\" />
-    <Folder Include="Views\" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="HandyControl" Version="3.6.0-rc3" />
+    <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.0.0-rc6.1" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3530-prerelease" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="assets\pic\Afk.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="assets\pic\Copy.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="assets\pic\Game.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="assets\pic\Keyboard.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="assets\html\day.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="assets\pic\Focus.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="assets\pic\Time.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

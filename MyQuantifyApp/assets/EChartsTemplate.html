@@ -1,0 +1,89 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>ECharts Chart</title>
+    <style>
+        /* 确保图表容器占满父控件空间 */
+        html, body, #chart-container {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #ffffff; /* 与 WPF 背景保持一致 */
+        }
+    </style>
+    <!-- 引入 ECharts 库 -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+</head>
+<body>
+    <!-- ECharts 渲染容器 -->
+    <div id="chart-container"></div>
+
+    <script>
+        var myChart = null;
+
+        /**
+         * 初始化并渲染 ECharts 图表。
+         * 接收来自 C# 后台的 JSON 字符串数据。
+         * @param {string} jsonOptionString - ECharts option 的 JSON 字符串。
+         */
+        function renderChart(jsonOptionString) {
+            try {
+                // 确保容器存在
+                var chartDom = document.getElementById('chart-container');
+
+                if (!myChart) {
+                    // 初始化图表实例
+                    myChart = echarts.init(chartDom);
+                }
+
+                // ECharts Option 包含 JS 函数 (如 new echarts.graphic.LinearGradient)
+                // C# 侧通过字符串替换传递了带标记的 JSON，因此我们需要在 JS 侧使用 eval()
+                // 或直接使用 new Function() 来解析包含函数的字符串。
+                // 由于 C# 已经处理了转义，这里直接执行 setOption。
+
+                // 【重要】：当 C# 传入的 JSON 包含需要在 JS 中执行的函数字符串时，
+                // 我们不能使用标准的 JSON.parse()。
+                // WeeklyReportViewModel 已经通过 JSON 序列化并替换了标记为可执行的 JS 代码字符串。
+                // 此时，jsonOptionString 本身已经是包含可执行 JS 代码的字符串。
+
+                // 为了安全和正确性，在 C# 侧使用转义后的 JSON 字符串调用 ExecuteScriptAsync
+                // 传入 JS 侧后，字符串会被解包。
+
+                // 因为 C# 侧已经通过 ExecuteScriptAsync 确保了 JS 代码执行，
+                // 且 option 中包含的 JS 函数部分已经被替换为可执行的 JS 表达式字符串，
+                // 理论上可以直接将其作为参数传递给 setOption。
+
+                // 但是，如果直接执行 setOption(jsonOptionString)，可能会因为类型不匹配而失败。
+                // 最可靠的方法是让 C# 传递一个纯 JSON，然后 C# 在传递给 ExecuteScriptAsync 时，
+                // 构造一个包含 'new Function' 或 'eval' 的脚本来创建 option 对象。
+
+                // 由于我们假设 C# 传入的是一个完整的、经过处理的 JSON 字符串，
+                // 我们可以使用 eval 来将其解析为包含 JS 对象的 option。
+
+                // 替代方案 (假设 C# 传入的是纯 JSON，这里手动执行 JS 替换——但 C# 已经做了替换，所以不需要)
+                // var option = JSON.parse(jsonOptionString);
+
+                // 采用最直接的方案：使用 eval 解析包含 JS 函数字符串的 option
+                var option = eval('(' + jsonOptionString + ')');
+
+                myChart.setOption(option, true); // true 用于不合并配置
+
+                // 监听窗口大小变化以自适应
+                window.addEventListener('resize', myChart.resize);
+
+                console.log("ECharts rendered successfully.");
+
+            } catch (e) {
+                console.error("ECharts 渲染失败: ", e);
+            }
+        }
+
+        // 暴露一个全局函数，供 C# 调用以传递数据
+        window.updateChart = renderChart;
+
+    </script>
+</body>
+</html>
