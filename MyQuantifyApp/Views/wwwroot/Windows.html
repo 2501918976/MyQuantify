@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>进程管理</title>
+    <link rel="stylesheet" href="common-style.css">
+    <script src="bridge.js"></script>
+    <style>
+        /* ... CSS 样式保持不变 ... */
+        .body-section {
+            flex: 1;
+            display: flex;
+            gap: 20px;
+            overflow: hidden;
+        }
+
+        .add-tag-group {
+            display: flex;
+            margin-top: 10px;
+            gap: 5px;
+        }
+
+            .add-tag-group button {
+                background-color: #27AE60;
+                border: none;
+                color: white;
+                border-radius: 4px;
+                padding: 6px 12px;
+                cursor: pointer;
+            }
+
+        .tag-list-panel li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            margin-bottom: 5px;
+            background-color: rgba(255,255,255,0.1);
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+            .tag-list-panel li.selected {
+                border: 1px solid #3498DB;
+                background-color: rgba(52, 152, 219, 0.2);
+            }
+
+
+        .delete-tag-btn {
+            background: none;
+            border: 1px solid #E74C3C;
+            color: #E74C3C;
+            padding: 2px 6px;
+            font-size: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            opacity: 0.7;
+        }
+
+            .delete-tag-btn:hover {
+                background-color: #E74C3C;
+                color: white;
+                opacity: 1;
+            }
+
+        .detail-panel {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow-y: auto;
+        }
+
+        .process-panel {
+            background-color: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+            .process-panel h4 {
+                margin: 0;
+                font-size: 16px;
+                border-bottom: 1px solid rgba(255,255,255,0.2);
+                padding-bottom: 4px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+        .window-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+            .window-list li {
+                padding: 4px 8px;
+                margin-bottom: 2px;
+                background-color: rgba(255,255,255,0.2);
+                border-radius: 4px;
+                font-size: 14px;
+                white-space: nowrap; /* 避免换行 */
+                overflow: hidden; /* 隐藏溢出部分 */
+                text-overflow: ellipsis; /* 显示省略号 */
+            }
+
+                .window-list li:hover {
+                    background-color: rgba(255,255,255,0.3);
+                }
+
+        .process-label-select {
+            background-color: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <div class="header">进程管理</div>
+
+        <div class="body-section">
+            <div class="tag-list-panel">
+                <h3>标签</h3>
+                <ul id="tagList">
+                </ul>
+                <div class="add-tag-group">
+                    <input type="text" id="newTagInput" placeholder="输入新标签">
+                    <button id="addTagBtn">添加</button>
+                </div>
+            </div>
+
+            <div class="detail-panel" id="detailPanel">
+                <p style="text-align: center; color: #ccc; padding-top: 50px;">请选择标签或等待数据加载...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量定义
+        const tagListEl = document.getElementById('tagList');
+        const detailPanelEl = document.getElementById('detailPanel');
+        const newTagInput = document.getElementById('newTagInput');
+        const addTagBtn = document.getElementById('addTagBtn');
+
+        let tags = []; // 存储 CategoryDetailDto 对象的数组
+        let selectedTagIndex = null;
+        let selectedTagName = null;
+
+        /**
+         * 检查 Bridge 响应是否有效并更新标签数据
+         * @param {object} response - 从 C# Bridge 收到的响应
+         * @returns {boolean} - 数据是否成功更新
+         */
+        function updateTagsFromResponse(response) {
+            if (response && response.tags && Array.isArray(response.tags)) {
+                tags = response.tags;
+                console.log(`[JS LOG] 数据更新成功。新标签数量: ${tags.length}`);
+                return true;
+            }
+            return false;
+        }
+
+        // 从Bridge加载标签数据
+        async function loadTagsData() {
+            try {
+                console.log("[JS LOG] 📡 通过Bridge加载标签数据...");
+                // 确保后端返回的是 { tags: [...] } 结构
+                const response = await Bridge.send('getTagsData', null, true);
+
+                if (response && response.tags && Array.isArray(response.tags)) { // 修正：从 response.tags 获取数组
+                    tags = response.tags;
+                    console.log(`[JS LOG] ✅ 加载成功: ${tags.length} 个标签`);
+                } else {
+                    throw new Error("C#返回数据格式错误，缺少 tags 数组。");
+                }
+
+                // 尝试保持当前选中，否则选中第一个
+                const currentTag = selectedTagName ? tags.find(t => t.name === selectedTagName) : null;
+                if (!currentTag && tags.length > 0) {
+                    selectedTagName = tags[0].name;
+                } else if (!currentTag && tags.length === 0) {
+                    selectedTagName = null;
+                }
+
+                renderTags();
+                renderDetailPanel();
+            } catch (e) {
+                console.error('[JS ERROR] 加载标签数据失败:', e);
+                detailPanelEl.innerHTML = '<p style="color:red; text-align:center; padding-top: 50px;">无法加载标签数据。</p>';
+            }
+        }
+
+
+        // 选择标签
+        async function selectTag(tagName) {
+            try {
+                if (selectedTagName === tagName) return; // 避免重复操作
+                console.log("[JS LOG] 正在选择标签:", tagName);
+
+                // C# 端的 selectTag 可能是用于记录状态
+                try {
+                    await Bridge.send('selectTag', { tagName }, true); // 使用 Promise 模式
+                } catch (bridgeError) {
+                    console.warn('[JS WARNING] Bridge选择标签发送失败:', bridgeError);
+                }
+
+                selectedTagName = tagName;
+                selectedTagIndex = tags.findIndex(t => t.name === selectedTagName);
+                renderTags();
+                renderDetailPanel();
+
+            } catch (error) {
+                console.error('[JS ERROR] 选择标签失败:', error);
+            }
+        }
+
+        // 添加标签
+        async function addTag(newTagName) {
+            newTagName = newTagName.trim();
+            if (!newTagName) return alert("标签名不能为空");
+
+            try {
+                console.log("[JS LOG] 正在请求后端添加标签:", newTagName);
+                const response = await Bridge.send('addTag', { tagName: newTagName }, true);
+
+                if (updateTagsFromResponse(response)) {
+                    // 成功后选中新添加的标签，并渲染
+                    selectedTagName = newTagName;
+                    renderTags();
+                    renderDetailPanel();
+                    newTagInput.value = '';
+                    return;
+                }
+                throw new Error(response?.Error || "操作失败，但未提供错误信息。");
+
+            } catch (error) {
+                console.error("[JS ERROR] 添加标签失败:", error);
+                alert("添加失败，请检查标签是否已存在。");
+            }
+        }
+
+
+        // 删除标签
+        async function deleteTag(tagName) {
+            if (!confirm(`确定要删除标签 "${tagName}" 吗？该标签下的进程将被移至“未分类”。`)) return;
+
+            try {
+                console.log("[JS LOG] 请求后端删除标签:", tagName);
+                const response = await Bridge.send('deleteTag', { tagName }, true);
+
+                if (updateTagsFromResponse(response)) {
+                    // 重新选择第一个标签（通常是未分类）
+                    selectedTagName = tags.length > 0 ? tags[0].name : null;
+                    renderTags();
+                    renderDetailPanel();
+                    return;
+                }
+                throw new Error(response?.Error || "操作失败，但未提供错误信息。");
+
+            } catch (error) {
+                console.error("[JS ERROR] 删除标签失败:", error);
+                alert("删除失败，请稍后再试。");
+            }
+        }
+
+
+        // 更改进程标签
+        async function changeTag(processName, oldTagName, newTagName) {
+            try {
+                if (oldTagName === newTagName) return;
+
+                console.log(`[JS LOG] 准备更改进程标签:`, { processName, oldTagName, newTagName });
+
+                // 注意：这里我们相信后端会执行数据库操作并返回新的完整数据
+                const payload = { processName, newTagName };
+                console.log('[JS LOG] 发送给 Bridge 的 payload:', payload);
+
+                const response = await Bridge.send('changeTag', payload, true);
+
+                console.log('[JS LOG] Bridge 返回的数据:', response);
+
+                if (updateTagsFromResponse(response)) {
+                    // 成功后重新渲染，保持当前选中的标签不变
+                    renderTags();
+                    renderDetailPanel();
+                    return;
+                }
+
+                console.warn('[JS WARNING] Bridge更改进程标签失败或返回数据无效，尝试重新加载数据...');
+                loadTagsData();
+
+            } catch (error) {
+                console.error('[JS ERROR] 更改进程标签失败:', error);
+                alert('更改进程标签失败，请稍后重试');
+            }
+        }
+
+
+        function renderTags() {
+            console.log("[JS LOG] 🎨 开始渲染标签列表...");
+            tagListEl.innerHTML = '';
+
+            const renderableTags = tags;
+
+            if (renderableTags.length === 0) {
+                tagListEl.innerHTML = '<p style="color:#aaa;">暂无标签</p>';
+                return;
+            }
+
+            renderableTags.forEach((tag) => {
+                const li = document.createElement('li');
+
+                const tagText = document.createElement('span');
+                // 确保 tag.processes 存在，否则显示 0
+                const processCount = (tag.processes && Array.isArray(tag.processes)) ? tag.processes.length : 0;
+                tagText.textContent = `${tag.name} (${processCount})`;
+                li.appendChild(tagText);
+
+                if (tag.name === selectedTagName) {
+                    li.classList.add('selected');
+                }
+
+                li.onclick = () => {
+                    selectTag(tag.name);
+                };
+
+                // 核心修改: 禁用 "未分类" 标签的删除按钮（通过 ID=1 或名称判断）
+                // 假设 ID=1 是“未分类”
+                const isUncategorized = tag.id === 1 || tag.name === "未分类";
+
+                if (!isUncategorized) {
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-tag-btn';
+                    deleteBtn.textContent = '删除';
+
+                    deleteBtn.onclick = (e) => {
+                        e.stopPropagation(); // 阻止事件冒泡到 li 的 onclick
+                        deleteTag(tag.name);
+                    };
+                    li.appendChild(deleteBtn);
+                } else {
+                    // 如果是“未分类”标签，添加一个不可删除的标记
+                    const span = document.createElement('span');
+                    span.style.color = '#7f8c8d';
+                    span.style.fontSize = '12px';
+                    span.textContent = ' (系统)';
+                    li.appendChild(span);
+                }
+
+                tagListEl.appendChild(li);
+            });
+            console.log("[JS LOG] 🎨 标签列表渲染完成。");
+        }
+
+
+
+        function renderDetailPanel() {
+            console.log(`[JS LOG] 🎨 开始渲染详情面板，当前标签: ${selectedTagName}`);
+            detailPanelEl.innerHTML = '';
+
+            const tag = tags.find(t => t.name === selectedTagName);
+
+            if (!tag) {
+                detailPanelEl.innerHTML = '<p style="text-align: center; color: #ccc; padding-top: 50px;">请选择标签或标签列表为空。</p>';
+                return;
+            }
+
+            // 检查进程列表是否有效
+            if (!tag.processes || tag.processes.length === 0) {
+                detailPanelEl.innerHTML = `<p style="text-align: center; color: #ccc; padding-top: 50px;">标签 "${tag.name}" 下暂无进程数据。</p>`;
+                return;
+            }
+
+            tag.processes.forEach(proc => {
+                const panel = document.createElement('div');
+                panel.className = 'process-panel';
+
+                const h4 = document.createElement('h4');
+                h4.textContent = proc.ProcessName;
+
+
+                const select = document.createElement('select');
+                select.className = 'process-label-select';
+
+                tags.forEach((t) => {
+                    const option = document.createElement('option');
+                    option.value = t.name;
+                    option.textContent = t.name;
+
+                    if (t.name === selectedTagName) {
+                        option.selected = true;
+                    }
+
+                    select.appendChild(option);
+                });
+
+                select.addEventListener('change', function () {
+                    const newTagName = this.value;
+                    const oldTagName = selectedTagName;
+
+                    changeTag(proc.ProcessName, oldTagName, newTagName);
+                });
+
+                h4.appendChild(select);
+                panel.appendChild(h4);
+
+                // 渲染窗口列表
+                const ul = document.createElement('ul');
+                ul.className = 'window-list';
+
+                // 🌟 核心修复尝试：将 proc.windows (小写) 改回 proc.Windows (大写)
+                if (proc.Windows && Array.isArray(proc.Windows) && proc.Windows.length > 0) {
+                    proc.Windows.forEach(win => {
+                        const li = document.createElement('li');
+                        li.textContent = win;
+                        li.title = win; // 鼠标悬停时显示完整的窗口标题
+                        ul.appendChild(li);
+                    });
+                } else {
+                    // **【DEBUG 提示】** 如果这里仍然失败，请在 C# 检查序列化设置，或在 JS 控制台打印 proc 对象
+                    console.warn(`[JS WARNING] 进程 ${proc.ProcessName} 缺少窗口数据。proc.Windows:`, proc.Windows);
+
+                    const li = document.createElement('li');
+                    li.textContent = '(无活跃窗口或窗口信息)';
+                    li.style.color = '#7f8c8d';
+                    li.style.backgroundColor = 'transparent';
+                    ul.appendChild(li);
+                }
+
+                panel.appendChild(ul);
+                detailPanelEl.appendChild(panel);
+            });
+        }
+
+        // 事件绑定
+        addTagBtn.addEventListener('click', () => {
+            addTag(newTagInput.value);
+        });
+
+        // 页面加载完成后，从 C# 加载数据
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTagsData();
+        });
+    </script>
+
+</body>
+</html>

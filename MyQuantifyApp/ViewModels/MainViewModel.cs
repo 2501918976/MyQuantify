@@ -20,15 +20,12 @@ namespace MyQuantifyApp.ViewModels
             set { _currentPage = value; OnPropertyChanged(); }
         }
 
-        // 命令
         public RelayCommand<string> ShowPageCommand { get; }
 
         public MainViewModel()
         {
-            // 初始化默认页面
-            CurrentPage = new Views.FocusView();
+            CurrentPage = new Views.DailyReportView();
 
-            // 初始化命令
             ShowPageCommand = new RelayCommand<string>(pageName =>
             {
                 switch (pageName)
@@ -39,21 +36,30 @@ namespace MyQuantifyApp.ViewModels
                     case "DailyReportView":
                         CurrentPage = new Views.DailyReportView();
                         break;
-                    case "WeeklyReportView":
-                        CurrentPage = new Views.WeeklyReportView();
+                    case "PieChartView":
+                        CurrentPage = new Views.PieChartView();
                         break;
-                    case "MonthlyReportView":
-                        CurrentPage = new Views.MonthlyReportView();
+                    case "LineChartView":
+                        CurrentPage = new Views.LineChartView();
                         break;
                     case "SettingsView":
                         CurrentPage = new Views.SettingsView();
+                        break;
+                    case "CopyboardView":
+                        CurrentPage = new Views.CopyboardView();
+                        break;
+                    case "KeyboradView":
+                        CurrentPage = new Views.KeyboradView();
+                        break;
+                    case "WindowsView":
+                        CurrentPage = new Views.WindowsView();
                         break;
                 }
             });
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string? name = null) =>
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        protected void OnPropertyChanged([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
     }
 }

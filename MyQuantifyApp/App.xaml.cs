@@ -1,14 +1,321 @@
-﻿using System.Configuration;
-using System.Data;
-using System.Windows;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.VisualBasic.Logging;
+using MyQuantifyApp.Database;
+using MyQuantifyApp.Database.Repositories.Raw;
+using MyQuantifyApp.Service;
+using MyQuantifyApp.Service.Services;
+using MyQuantifyApp.Services;
+using MyQuantifyApp.ViewModels;
+using Serilog;
+using System;
+using System.ComponentModel;
+using System.Drawing;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using SysWin = System.Windows;
+using System.Linq;
+using Microsoft.Win32;
+using System.Reflection;
 
 namespace MyQuantifyApp
 {
-    /// <summary>
-    /// Interaction logic for App.xaml
-    /// </summary>
-    public partial class App : Application
-    {
-    }
 
+    public partial class App : SysWin.Application
+    {
+        #region 成员变量
+
+        private NotifyIcon _notifyIcon;
+        public bool _isExit;
+        private const int AGGREGATION_INTERVAL_MINUTES = 1;
+        public static MainViewModel MainVmInstance { get; set; }
+        private readonly SQLiteDataService _dataService = new SQLiteDataService();
+        private ActivityMonitorService _monitorService;
+        private DataFlushService _flushService;
+        private AggregationService _aggregationService;
+        private CancellationTokenSource _aggregationCts;
+
+        #endregion
+
+        #region 辅助方法 - 路径管理
+
+        private static string GetLogDirectoryPath()
+        {
+            const string appName = "MyQuantifyApp";
+            const string logFolderName = "Logs";
+
+            string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+
+            string fullLogPath = Path.Combine(appDataPath, appName, logFolderName);
+
+            if (!Directory.Exists(fullLogPath))
+            {
+                Directory.CreateDirectory(fullLogPath);
+            }
+
+            return fullLogPath;
+        }
+
+        #endregion
+
+        #region 应用程序生命周期
+
+        protected override void OnStartup(SysWin.StartupEventArgs e)
+        {
+            bool isAutoStart = e.Args != null && e.Args.Any(arg =>
+                                arg.Equals("/autostart", StringComparison.OrdinalIgnoreCase));
+
+            #region 1. 日志系统初始化
+
+            string logDirectory = GetLogDirectoryPath();
+            string logFilePath = Path.Combine(logDirectory, "applog-.txt");
+
+            Serilog.Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .WriteTo.Debug()
+                .WriteTo.File(logFilePath,
+                    rollingInterval: RollingInterval.Day,
+                    outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+                .CreateLogger();
+
+            Serilog.Log.Information($"🚀 应用程序启动。日志文件路径：{logFilePath}");
+
+            #endregion
+
+            base.OnStartup(e);
+
+            this.ShutdownMode = System.Windows.ShutdownMode.OnExplicitShutdown;
+
+            #region 2. 数据库与连接初始化
+
+            _dataService.InitializeDatabase();
+            string connString = _dataService.ConnectionString;
+
+            #endregion
+
+            #region 3. 仓储层初始化
+
+            var processRepo = new ProcessRepository(connString);
+            var windowRepo = new WindowRepository(connString);
+            var windowActivityRepo = new WindowActivityRepository(connString);
+            var keyRepo = new KeyCharDataRepository(connString);
+            var clipboardRepo = new ClipboardActivityDataRepository(connString);
+            var afkRepo = new AfkActivityDataRepository(connString);
+
+            #endregion
+
+            #region 4. 服务层初始化
+
+            _monitorService = new ActivityMonitorService(
+                processRepo,
+                windowRepo,
+                windowActivityRepo
+            );
+
+            _flushService = new DataFlushService(
+                _monitorService,
+                keyRepo,
+                windowRepo,
+                windowActivityRepo,
+                clipboardRepo,
+                afkRepo
+            );
+
+            _aggregationService = new AggregationService(connString);
+
+            _monitorService.SetDataFlushService(_flushService);
+
+            #endregion
+
+            #region 5. 启动监控与聚合任务
+
+            try
+            {
+                _monitorService.StartMonitoring();
+
+                StartAggregationTask();
+            }
+            catch (Win32Exception ex)
+            {
+                SysWin.MessageBox.Show(
+                    $"致命错误：钩子安装失败。请以管理员身份运行。\n错误码: {ex.NativeErrorCode}",
+                    "监控启动失败",
+                    SysWin.MessageBoxButton.OK, SysWin.MessageBoxImage.Error);
+                Current.Shutdown();
+                return;
+            }
+            catch (Exception ex)
+            {
+                SysWin.MessageBox.Show(
+                    $"启动监控时发生未知错误: {ex.Message}",
+                    "监控启动失败",
+                    SysWin.MessageBoxButton.OK, SysWin.MessageBoxImage.Error);
+                Current.Shutdown();
+                return;
+            }
+
+            #endregion
+
+            #region 6. UI 与托盘初始化
+
+            InitializeNotifyIcon();
+
+            MainWindow = new MainWindow();
+
+            if (!isAutoStart)
+            {
+                MainWindow.Show();
+                Serilog.Log.Information("程序以常规模式启动，显示主窗口。");
+            }
+            else
+            {
+                MainWindow.Visibility = SysWin.Visibility.Hidden;
+                Serilog.Log.Information("程序以静默模式启动，隐藏主窗口。");
+            }
+
+            #endregion
+        }
+
+        protected override void OnExit(SysWin.ExitEventArgs e)
+        {
+            #region 退出清理任务
+
+            _aggregationCts?.Cancel();
+
+            if (_notifyIcon != null)
+            {
+                _notifyIcon.Dispose();
+            }
+
+            try
+            {
+                _monitorService?.CheckAfkStatus();
+                _monitorService?.FlushCurrentActiveWindow();
+                _monitorService?.StopMonitoring();
+            }
+            catch (Exception ex)
+            {
+
+            }
+
+            base.OnExit(e);
+
+            #endregion
+        }
+
+        #endregion
+
+        #region 系统托盘与窗口控制
+
+        private void InitializeNotifyIcon()
+        {
+            _notifyIcon = new NotifyIcon();
+            _notifyIcon.Visible = true;
+            _notifyIcon.Text = "MyQuantifyApp - 生产力追踪";
+
+            try
+            {
+                var iconStream = GetType().Assembly.GetManifestResourceStream("MyQuantifyApp.assets.logo.slpsv-h5a2m-001.ico");
+                if (iconStream != null)
+                {
+                    _notifyIcon.Icon = new Icon(iconStream);
+                }
+                else
+                {
+                    _notifyIcon.Icon = SystemIcons.Application;
+                }
+            }
+            catch (Exception ex)
+            {
+                _notifyIcon.Icon = SystemIcons.Application;
+            }
+
+            _notifyIcon.MouseDoubleClick += (s, e) =>
+            {
+                if (e.Button == MouseButtons.Left)
+                {
+                    ShowMainWindow();
+                }
+            };
+
+            var menu = new ContextMenuStrip();
+            menu.Items.Add("显示主界面", null, (s, e) => ShowMainWindow());
+            menu.Items.Add(new ToolStripSeparator());
+            menu.Items.Add("退出应用", null, (s, e) => ExitApplication());
+
+            _notifyIcon.ContextMenuStrip = menu;
+        }
+
+        private void NotifyIcon_MouseDoubleClick(object sender, System.Windows.Forms.MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                ShowMainWindow();
+            }
+        }
+
+        private void ShowMainWindow()
+        {
+            if (MainWindow == null) return;
+
+            if (!MainWindow.IsVisible)
+            {
+                MainWindow.Show();
+            }
+
+            if (MainWindow.WindowState == SysWin.WindowState.Minimized)
+            {
+                MainWindow.WindowState = SysWin.WindowState.Normal;
+            }
+
+            MainWindow.Activate();
+        }
+
+        private void ExitApplication()
+        {
+            _isExit = true;
+            MainWindow?.Close();
+        }
+
+        #endregion
+
+        #region 后台任务
+
+        private void StartAggregationTask()
+        {
+            _aggregationCts = new CancellationTokenSource();
+
+            Task.Run(async () =>
+            {
+                var token = _aggregationCts.Token;
+
+                PerformAggregation();
+
+                while (!token.IsCancellationRequested)
+                {
+                    await Task.Delay(TimeSpan.FromMinutes(AGGREGATION_INTERVAL_MINUTES), token);
+
+                    if (token.IsCancellationRequested)
+                        break;
+
+                    PerformAggregation();
+                }
+            }, _aggregationCts.Token);
+        }
+
+        private void PerformAggregation()
+        {
+            try
+            {
+                _aggregationService.AggregateAll(DateTime.Today);
+            }
+            catch (Exception ex)
+            {
+
+            }
+        }
+
+        #endregion
+    }
 }

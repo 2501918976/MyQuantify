@@ -3,13 +3,10 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-      
       xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
-      
       mc:Ignorable="d" 
-      d:DesignHeight="700" d:DesignWidth="1200"
-      Title="DailyReportView"
-      Background="#F8F9FA">
+      d:DesignHeight="800" d:DesignWidth="1300"
+      Title="DailyReportView">
 
     <Grid>
         <wv2:WebView2 x:Name="DailyReportWebView"

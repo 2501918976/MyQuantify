@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人量化月度趋势概览</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <link rel="stylesheet" href="common-style.css">
+    <script src="bridge.js"></script>
+    <style>
+        /* 继承 common-style.css 中的 .panel 样式 */
+        .chart-container {
+            background-color: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(5px);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            transition: all 0.3s ease;
+        }
+
+        /* 调整折线图布局为一行两个，并继承 common-style.css 的容器样式 */
+        .main-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            height: 100%;
+            overflow: auto;
+            /* 继承 common-style.css 中 main-container 的 max-width/height/padding */
+            max-width: 1280px;
+            max-height: 760px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .chart-container {
+            min-height: 220px; /* 增加最小高度以适应布局 */
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chart-placeholder {
+            flex-grow: 1;
+            min-height: 0;
+            min-width: 0;
+        }
+
+        /* 继承 common-style.css 中的标题样式 */
+        .chart-custom-label {
+            /* 确保白色字体 */
+            color: #f0f0f0 !important; 
+        }
+    </style>
+</head>
+<body>
+
+<div class="main-container">
+
+    <div class="chart-container"><div id="chart-typing" class="chart-placeholder"></div></div>
+    <div class="chart-container"><div id="chart-copy" class="chart-placeholder"></div></div>
+    <div class="chart-container"><div id="chart-total-time" class="chart-placeholder"></div></div>
+    <div class="chart-container"><div id="chart-work-time" class="chart-placeholder"></div></div>
+    <div class="chart-container"><div id="chart-game-time" class="chart-placeholder"></div></div>
+    <div class="chart-container"><div id="chart-afk-time" class="chart-placeholder"></div></div>
+
+</div>
+
+<script type="text/javascript">
+    const charts = [];
+    let dailyData = []; 
+
+    // =======================================================
+    // 用户可设置参数：主题模式切换 (强制使用深色模式的白色/灰色)
+    // =======================================================
+    const isDarkMode = true; // 保持深色模式
+
+    // 定义图表使用的白色/灰色系颜色
+    const COLOR_PRIMARY = '#FFFFFF'; // 主色：白色
+    const COLOR_ACCENT = '#B0B0B0'; // 次色：浅灰
+    const COLOR_AXIS = '#CCCCCC';  // 坐标轴颜色：更亮的灰
+
+    // 图表配置 
+    const chartConfig = [
+        { id: 'chart-typing', title: '打字数量', unit: '次', key: 'typingCount', color: COLOR_PRIMARY }, 
+        { id: 'chart-copy', title: '复制次数', unit: '次', key: 'copyCount', color: COLOR_ACCENT }, 
+        { id: 'chart-total-time', title: '总使用时间', unit: '小时', key: 'total', color: COLOR_PRIMARY }, 
+        { id: 'chart-work-time', title: '工作时间', unit: '小时', key: 'work', color: COLOR_ACCENT }, 
+        { id: 'chart-game-time', title: '游戏时间', unit: '小时', key: 'game', color: COLOR_PRIMARY }, 
+        { id: 'chart-afk-time', title: 'AFK时间', unit: '小时', key: 'afk', color: COLOR_ACCENT } 
+    ];
+
+    // =======================================================
+    // 图表数据处理 (保持不变)
+    // =======================================================
+    function processLineData(data, key) {
+        // C# 传来的数据已经是 {yyyy-MM-dd} 格式，我们截取 MM-dd
+        // FIX: 属性名应为 Date (大写)
+        const dates = data.map(item => item.Date.substring(5)); 
+        // FIX: 确保数据属性名也正确处理，您的 C# KeyCount/CopyCount 等是驼峰命名，这里保持一致
+        const values = data.map(item => item[key]);
+        return { dates, values };
+    }
+
+    // =======================================================
+    // ECharts 初始化/更新 
+    // =======================================================
+
+    /**
+     * 初始化并配置单个折线图
+     */
+    function initLineChart(chartElementId, title, unit, color) {
+        const chartElement = document.getElementById(chartElementId);
+        if (!chartElement) return null;
+
+        const chart = echarts.init(chartElement);
+        
+        // --- 1. 主题颜色设置 ---
+        const axisTextColor = '#f0f0f0'; // 统一白色
+        const finalLineColor = color; // 使用配置的白色或浅灰
+        const axisLineColor = COLOR_AXIS;
+        const splitLineColor = 'rgba(255,255,255,0.1)'; // 浅色分割线
+        
+        // 1. 创建并注入自定义外部标签 
+        const labelContainer = chartElement.parentNode;
+        labelContainer.querySelectorAll('.chart-custom-label').forEach(el => el.remove()); 
+        
+        const labelDiv = document.createElement('div');
+        labelDiv.className = 'chart-custom-label';
+        labelDiv.textContent = `${title}`;
+        labelContainer.prepend(labelDiv); 
+
+        // 2. 配置 ECharts 选项
+        const option = {
+            backgroundColor: 'transparent', 
+            textStyle: { color: axisTextColor },
+            title: { show: false },
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: { type: 'shadow' },
+                // Tooltips 格式化函数：处理 null 值
+                formatter: function (params) {
+                    if (!params || params.length === 0) return '';
+                    
+                    const param = params[0]; 
+                    const value = param.value;
+                    const date = param.name.replace('-', '月') + '日'; 
+                    
+                    if (value === null || value === undefined) {
+                        return `<div style="text-align: center;">${date}<br/><strong style="color:#e74c3c;">数据缺失</strong></div>`;
+                    }
+                    
+                    const formattedValue = unit === '小时' ? value.toFixed(1) : value.toLocaleString();
+                    return `${date}<br/>${title}: <strong>${formattedValue}</strong>${unit}`;
+                }
+            },
+            grid: { left: '3%', right: '4%', bottom: '15%', top: '15%', containLabel: true }, 
+            xAxis: {
+                type: 'category',
+                boundaryGap: false,
+                data: [], 
+                axisLine: { lineStyle: { color: axisLineColor } }, 
+                axisLabel: {
+                    color: axisTextColor, 
+                    interval: 4, 
+                },
+                axisTick: { show: false }
+            },
+            yAxis: {
+                type: 'value',
+                name: '', 
+                axisLine: { show: false }, 
+                splitLine: { lineStyle: { color: splitLineColor } }, 
+                axisLabel: { 
+                    color: axisTextColor, 
+                    formatter: function(value) {
+                        if (value > 1000) return (value / 1000).toFixed(0) + 'k';
+                        return unit === '小时' ? value.toFixed(1) : value;
+                    }
+                }
+            },
+            series: [{
+                name: title,
+                type: 'line',
+                smooth: true,
+                symbol: 'circle',
+                symbolSize: 4,
+                itemStyle: { color: finalLineColor }, 
+                lineStyle: { width: 3, color: finalLineColor }, 
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: finalLineColor + '80' }, 
+                        { offset: 1, color: finalLineColor + '00' }  
+                    ])
+                }, 
+                data: []
+            }]
+        };
+        chart.setOption(option);
+        charts.push(chart);
+        return chart;
+    }
+    
+    /**
+     * 使用Bridge加载图表数据
+     */
+    async function loadChartData() {
+        // 在这里，dailyData 默认为空数组 []
+        dailyData = []; 
+        
+        try {
+            console.log("正在通过Bridge加载折线图数据...");
+            
+            // 尝试从Bridge获取数据
+            if (window.Bridge && typeof window.Bridge.send === 'function') {
+                const response = await window.Bridge.send('getLineChartData', { type: 'activity', timeRange: 'month' }, true);
+                
+                // 仅在 Bridge 成功返回有效数据时才更新 dailyData
+                if (response && Array.isArray(response.data) && response.data.length > 0) {
+                    dailyData = response.data;
+                    console.log("成功从Bridge获取数据");
+                } else {
+                    console.warn("Bridge返回数据为空或格式不正确，图表将保持空白。");
+                }
+            } else {
+                console.error("Bridge对象不存在，图表将保持空白。");
+            }
+            
+            // 无论数据是否成功获取，都尝试更新图表。
+            // 如果 dailyData 是 []，图表将显示空数据。
+            chartConfig.forEach(config => {
+                const chartInstance = charts.find(c => c.getDom().id === config.id);
+                if (chartInstance) {
+                    const processedData = processLineData(dailyData, config.key);
+                    
+                    chartInstance.setOption({
+                        xAxis: { data: processedData.dates },
+                        series: [{ data: processedData.values }]
+                    });
+                }
+            });
+            
+            console.log("折线图数据加载流程结束。");
+        } catch (error) {
+            // Bridge调用失败（如超时、异常），dailyData 保持为空，图表空白。
+            console.error("加载折线图数据失败:", error);
+
+            // 确保图表在失败时也更新，以清除可能存在的任何初始模拟数据 (虽然我们已经移除了模拟数据)
+            chartConfig.forEach(config => {
+                const chartInstance = charts.find(c => c.getDom().id === config.id);
+                if (chartInstance) {
+                    chartInstance.setOption({
+                        xAxis: { data: [] },
+                        series: [{ data: [] }]
+                    });
+                }
+            });
+        }
+    }
+
+    /**
+     * 页面初始化：初始化所有 ECharts 实例，然后加载数据。
+     */
+    function initializeCharts() {
+        // 初始化六个图表实例 (此时数据为空)
+        chartConfig.forEach(config => {
+            initLineChart(config.id, config.title, config.unit, config.color);
+        });
+
+        // 监听页面大小变化
+        window.addEventListener('resize', function() {
+            charts.forEach(chart => chart.resize());
+        });
+        
+        // 首次加载时，调用API获取数据
+        loadChartData();
+    }
+
+    document.addEventListener('DOMContentLoaded', initializeCharts);
+
+</script>
+</body>
+</html>

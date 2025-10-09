@@ -5,17 +5,14 @@
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
       xmlns:local="clr-namespace:MyQuantifyApp.Views"
       mc:Ignorable="d" 
-            d:DesignHeight="700" d:DesignWidth="1200"
-      Title="SettingsView"
-      Background="#F0F0F0">
+      xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+      d:DesignHeight="800" d:DesignWidth="1300"
+      Title="SettingView">
 
-    <Grid Margin="20">
-        <!-- 设置选项视图的占位文本框 -->
-        <TextBlock Text="[设置选项视图占位区域]"
-                   FontSize="30"
-                   FontWeight="Bold"
-                   Foreground="#34495E"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center"/>
+    <Grid>
+        <wv2:WebView2 x:Name="SettingWebView"
+                      Source="about:blank"
+                      HorizontalAlignment="Stretch"
+                      VerticalAlignment="Stretch"/>
     </Grid>
 </Page>

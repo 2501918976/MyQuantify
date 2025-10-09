@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人量化数据日报</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <link rel="stylesheet" href="common-style.css">
+    <script src="bridge.js"></script>
+    
+    <style>
+        /* ---------------------------------------------------- */
+        /* 页面特定样式：根据 common-style.css 的布局进行调整 */
+        /* ---------------------------------------------------- */
+
+        /* 覆盖 body 样式，以匹配 common-style.css 的主容器最大尺寸 */
+        body { 
+            padding: 0; /* 移除额外的 padding，让 main-container 的 padding 生效 */
+        }
+        
+        /* 刷新按钮样式 */
+        .refresh-button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .refresh-button:hover {
+            background-color: #2980b9;
+        }
+        
+        h2 {
+            margin: 0;
+            color: #ffffff;
+        }
+        
+        .main-container {
+            display: grid;
+            /* 调整为 auto / 1.7fr / 3fr，确保图表有足够空间 */
+            grid-template-rows: auto 1.7fr 3fr; 
+            gap: 15px; 
+        }
+
+        .top-panel {
+            min-height: auto; 
+        }
+        
+        /* 确保仪表盘6个内容在同一行显示 */
+        .dashboard-grid {
+            grid-template-columns: repeat(6, 1fr) !important;
+            gap: 15px;
+        }
+
+        /* 使用 common-style.css 中的 .chart-panel 基础样式 */
+        .chart-panel {
+            padding: 15px; 
+        }
+
+        /* 确保图表占位符撑满容器，这是 ECharts 渲染的关键 */
+        .chart-placeholder {
+            height: 100%;
+            width: 100%;
+            min-height: 0; 
+            flex-grow: 1; 
+        }
+        
+        .bottom-panel {
+            display: flex;
+            gap: 15px; 
+            height: 100%;
+            width: 100%;
+        }
+        .pie-chart-container {
+            flex: 1; 
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 卡片图标颜色（保持鲜艳，不跟随白色主题） */
+        #card-total-time .icon { color: #2ecc71 !important; }
+        #card-work-time .icon { color: #3498db !important; }
+        #card-game-time .icon { color: #e74c3c !important; }
+        #card-afk-time .icon { color: #f39c12 !important; }
+        #card-typing-count .icon { color: #8e44ad !important; }
+        #card-copy-count .icon { color: #1abc9c !important; }
+
+    </style>
+</head>
+<body>
+
+<div class="main-container">
+
+    <div class="top-panel">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <!-- <h2>个人量化数据日报</h2> -->
+            <!-- <button id="refresh-btn" class="refresh-button">
+                <i class="fas fa-sync-alt"></i> 刷新数据
+            </button> -->
+        </div>
+        <div class="dashboard-grid" id="data-cards">
+            <div class="dashboard-item" id="card-total-time">
+                <i class="icon fas fa-clock" style="color:#2ecc71;"></i>
+                <div class="label">总使用时间</div>
+                <div class="value">--<span class="unit">小时</span></div>
+            </div>
+            <div class="dashboard-item" id="card-work-time">
+                <i class="icon fas fa-briefcase" style="color:#3498db;"></i>
+                <div class="label">工作时间</div>
+                <div class="value">--<span class="unit">小时</span></div>
+            </div>
+            <div class="dashboard-item" id="card-game-time">
+                <i class="icon fas fa-gamepad" style="color:#e74c3c;"></i>
+                <div class="label">游戏时间</div>
+                <div class="value">--<span class="unit">小时</span></div>
+            </div>
+            <div class="dashboard-item" id="card-afk-time">
+                <i class="icon fas fa-mug-hot" style="color:#f39c12;"></i>
+                <div class="label">AFK时间</div>
+                <div class="value">--<span class="unit">小时</span></div>
+            </div>
+            <div class="dashboard-item" id="card-typing-count">
+                <i class="icon fas fa-keyboard" style="color:#8e44ad;"></i>
+                <div class="label">打字数</div>
+                <div class="value">--<span class="unit">千次</span></div>
+            </div>
+            <div class="dashboard-item" id="card-copy-count">
+                <i class="icon fas fa-copy" style="color:#1abc9c;"></i>
+                <div class="label">复制次数</div>
+                <div class="value">--<span class="unit">次</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="chart-panel middle-panel">
+        <div id="mixed-chart" class="chart-placeholder"></div>
+    </div>
+
+    <div class="bottom-panel">
+        <div class="chart-panel pie-chart-container">
+            <div class="chart-title">今日时间占比</div> 
+            <div id="pie-chart-1" class="chart-placeholder"></div>
+        </div>
+        <div class="chart-panel pie-chart-container">
+            <div class="chart-title">今日应用占比 (TOP 5)</div>
+            <div id="pie-chart-2" class="chart-placeholder"></div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+// 全局 ECharts 实例
+let myChartMixed, myChart1, myChart2;
+const charts = [];
+
+// 统一使用的白色和灰色系颜色
+const COLOR_WHITE = '#ffffff';
+const COLOR_GREY = '#b0b0b0';
+const COLOR_LINE = '#888888'; 
+const COLOR_BAR = '#aaaaaa';
+const COLOR_AXIS = '#cccccc';
+
+const PIE_COLORS = [
+    '#ffffff', // 白色
+    '#aaaaaa', // 
+    '#777777', // 
+    '#444444', // 
+    '#b0b0b0'  // 
+];
+
+
+// =======================================================
+// 更新仪表盘和图表 (功能正确，样式已定)
+// =======================================================
+/**
+ * 从 C# 获取的数据可能包含以下结构：
+ * {
+ * cards: { totalTime, workTime, ... }, 
+ * mixedChart: { typingData, copyData },
+ * timePie: [ {value, name}, ... ],
+ * appPie: [ {value, name}, ... ]
+ * }
+ */
+function updateDashboard(data) {
+    if(!data) return;
+
+    // 1. 更新仪表盘
+    // 注意：C# 代码中的 cards 数据是扁平化的 (total, work, game, afk, typingCount, copyCount)
+    // 这里需要将扁平化数据转为 cards 结构，或者直接使用扁平化属性。我们采用第二种：
+    const c = data; 
+    document.querySelector('#card-total-time .value').innerHTML = `${c.total?.toFixed(1)||'--'}<span class="unit">小时</span>`;
+    document.querySelector('#card-work-time .value').innerHTML = `${c.work?.toFixed(1)||'--'}<span class="unit">小时</span>`;
+    document.querySelector('#card-game-time .value').innerHTML = `${c.game?.toFixed(1)||'--'}<span class="unit">小时</span>`;
+    document.querySelector('#card-afk-time .value').innerHTML = `${c.afk?.toFixed(1)||'--'}<span class="unit">小时</span>`;
+    document.querySelector('#card-typing-count .value').innerHTML = `${c.typingCount?.toFixed(1)||'--'}<span class="unit">千次</span>`;
+    document.querySelector('#card-copy-count .value').innerHTML = `${c.copyCount||'--'}<span class="unit">次</span>`;
+
+    // 2. 更新图表
+    if(c.typingData && c.copyData && myChartMixed) {
+        myChartMixed.setOption({
+            series: [
+                // 【关键修正】：确保在更新数据时，系列类型和 Y 轴索引不丢失
+                { name:'打字数', type:'line', yAxisIndex:0, data:c.typingData },
+                { name:'复制次数', type:'bar', yAxisIndex:1, data:c.copyData }
+            ]
+        });
+    }
+
+    if(c.timePie && myChart1) {
+        myChart1.setOption({ series:[{ data:c.timePie }] });
+    }
+
+    if(c.appPie && myChart2) {
+        myChart2.setOption({ series:[{ data:c.appPie }] });
+    }
+}
+
+// =======================================================
+// 初始化 ECharts (白色/灰色风格)
+// =======================================================
+function initCharts() {
+    const hours = Array.from({length:24},(_,i)=>`${i}时`);
+    const initialData = Array(24).fill(0);
+    const commonTextStyle = { color: COLOR_WHITE };
+
+    // 中部混合图
+    myChartMixed = echarts.init(document.getElementById('mixed-chart'), null, {renderer:'svg'});
+    charts.push(myChartMixed);
+    myChartMixed.setOption({
+        title: { text: '时段活动概览 (打字数 vs 复制次数)', textStyle: commonTextStyle },
+        backgroundColor:'transparent',
+        tooltip: { 
+            trigger: 'axis',
+            axisPointer: { type: 'shadow' }
+        },
+        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+        legend:{data:['打字数','复制次数'],top:'top',textStyle:commonTextStyle},
+        xAxis:[{ 
+            type:'category', 
+            data:hours, 
+            axisLabel:{color:COLOR_AXIS}, 
+            axisLine:{lineStyle:{color:COLOR_AXIS}} 
+        }],
+        yAxis:[
+            { 
+                type:'value', name:'打字数(百次)', 
+                axisLabel:{color:COLOR_AXIS}, min:0, 
+                splitLine:{lineStyle:{color:'rgba(255,255,255,0.1)'}}, 
+                nameTextStyle: commonTextStyle
+            },
+            { 
+                type:'value', name:'复制次数', 
+                axisLabel:{color:COLOR_AXIS}, min:0, 
+                splitLine:{show:false}, 
+                nameTextStyle: commonTextStyle
+            }
+        ],
+        series:[
+            { name:'打字数', type:'line', yAxisIndex:0, data:initialData, smooth:true, lineStyle:{width:3}, itemStyle:{color:COLOR_LINE} },
+            { name:'复制次数', type:'bar', yAxisIndex:1, data:initialData, barWidth:'50%', itemStyle:{color:COLOR_BAR} }
+        ],
+        textStyle: { color: COLOR_WHITE }
+    });
+
+    // 饼图1：时间占比
+    myChart1 = echarts.init(document.getElementById('pie-chart-1'), null, {renderer:'svg'});
+    charts.push(myChart1);
+    myChart1.setOption({
+        backgroundColor:'transparent',
+        tooltip: { trigger: 'item', formatter: '{b}: {c}小时 ({d}%)' },
+        legend: { bottom: '0', textStyle:commonTextStyle },
+        color: PIE_COLORS, 
+        series: [{ 
+            name:'时间占比', 
+            type:'pie', 
+            radius:['30%','70%'], 
+            data:[], 
+            label:{color:COLOR_WHITE} , 
+            labelLine: { lineStyle: { color: COLOR_GREY } } 
+        }],
+        textStyle: { color: COLOR_WHITE }
+    });
+
+    // 饼图2：应用占比
+    myChart2 = echarts.init(document.getElementById('pie-chart-2'), null, {renderer:'svg'});
+    charts.push(myChart2);
+    myChart2.setOption({
+        backgroundColor:'transparent',
+        tooltip: { trigger: 'item', formatter: '{b}: {c}小时 ({d}%)' },
+        legend: { bottom: '0', textStyle:commonTextStyle },
+        color: PIE_COLORS, 
+        series: [{ 
+            name:'应用占比', 
+            type:'pie', 
+            radius:['30%','70%'], 
+            data:[], 
+            label:{color:COLOR_WHITE},
+            labelLine: { lineStyle: { color: COLOR_GREY } }
+        }],
+        textStyle: { color: COLOR_WHITE }
+    });
+
+    // 自适应
+    window.addEventListener('resize', ()=>charts.forEach(c=>c.resize()));
+}
+
+// =======================================================
+// 从 C# 获取日报数据
+// =======================================================
+function fetchDailyData() {
+    if (window.Bridge) {
+        console.log('通过 Bridge 请求日报数据...');
+        return Bridge.send('getDailyData', null, true).then(data => {
+            console.log('通过 Bridge 接收到日报数据:', data);
+            // C# 返回的数据格式与 updateDashboard 预期的一致
+            if (data) {
+                 updateDashboard(data);
+            }
+            return data;
+        }).catch(bridgeError => {
+            console.error('通过 Bridge 获取日报数据失败:', bridgeError);
+            // 不使用模拟数据，保持空白状态
+            return null;
+        });
+    } else {
+        console.error("Bridge.js 未加载或环境不支持。");
+        return Promise.resolve(null);
+    }
+}
+
+// =======================================================
+// 页面加载初始化
+// =======================================================
+document.addEventListener('DOMContentLoaded', ()=>{
+    // 1. 初始化图表
+    initCharts();
+
+    // 2. 设置 C# 主动通知的处理函数
+    if (window.Bridge) {
+        Bridge.on('notify', (data) => {
+            console.log('来自 C# 的通知:', data.message);
+            // 可以在这里显示通知或更新状态
+        });
+
+        // 3. 从 C# 请求日报数据
+        fetchDailyData();
+        
+        // 4. 添加刷新按钮事件监听
+        document.getElementById('refresh-btn').addEventListener('click', fetchDailyData);
+    } else {
+        console.error("Bridge.js 未加载或环境不支持。");
+    }
+});
+</script>
+
+</body>
+</html>
