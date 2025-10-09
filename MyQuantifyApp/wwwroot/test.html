@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>WebView2 测试页面</title>
+</head>
+<body>
+    <h2>WebView2 双向通信测试</h2>
+    <button id="sendBtn">发送请求给 C#</button>
+    <div id="result" style="margin-top:10px;color:blue;"></div>
+
+    <script>
+        // 简单 Bridge
+        const Bridge = {
+            _reqId: 0,
+            _pending: {},
+            send(cmd, data) {
+                const reqId = ++this._reqId;
+                console.log(`[Bridge] 发送请求: cmd=${cmd}, _reqId=${reqId}`, data);
+                return new Promise(resolve => {
+                    this._pending[reqId] = resolve;
+                    window.chrome.webview.postMessage(JSON.stringify({ cmd, data, _reqId: reqId }));
+                });
+            },
+            _dispatch(msg) {
+                if (msg._resId && this._pending[msg._resId]) {
+                    console.log(`[Bridge] 收到响应: _resId=${msg._resId}`, msg.data);
+                    this._pending[msg._resId](msg.data);
+                    delete this._pending[msg._resId];
+                }
+            }
+        };
+
+        // 监听来自 C# 的所有消息
+        window.chrome.webview.addEventListener('message', e => {
+            try {
+                const msg = JSON.parse(e.data);
+                console.log('[JS] 收到消息:', msg);
+
+                // C# 主动通知
+                if (msg.cmd === 'notify') {
+                    console.log('[JS] C# 主动通知:', msg.data);
+                    alert('C# 主动通知: ' + JSON.stringify(msg.data));
+                    return;
+                }
+
+                // 响应 Promise
+                Bridge._dispatch(msg);
+            } catch (err) {
+                console.error('[JS] 消息解析失败:', err, e.data);
+            }
+        });
+
+        // 点击按钮发送 queryHistory 请求
+        document.getElementById('sendBtn').addEventListener('click', async () => {
+            console.log('[JS] 点击按钮发送 queryHistory 请求');
+            const data = await Bridge.send('queryHistory', { startDate: '2025-10-01', endDate: '2025-10-11' });
+            console.log('[JS] queryHistory 返回结果:', data);
+            document.getElementById('result').innerText = JSON.stringify(data, null, 2);
+        });
+    </script>
+</body>
+</html>

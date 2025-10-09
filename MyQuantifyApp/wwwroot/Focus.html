@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>专注模式页面</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<link rel="stylesheet" href="common-style.css">
+<script src="bridge.js"></script>
+<style>
+/* 专注模式特定样式 */
+.top-section {
+    flex: 1;
+    display: flex;
+    padding: 25px;
+    gap: 25px;
+}
+
+.bottom-section {
+    height: 100px;
+    padding: 0 25px 25px 25px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.timer-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 80%;
+    height: 100%;
+    font-size: calc(0.5vw + 0.5vh + 10px);
+}
+
+.timer-icon {
+    font-size: 4em;
+    color: #3498DB;
+    margin-bottom: 0.5em;
+    animation: pulse 2s infinite ease-in-out;
+}
+
+.time-display {
+    font-size: 150px;
+    font-weight: 900;
+    color: #FFFFFF;
+    letter-spacing: 5px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums; /* 等宽数字 */
+    font-family: 'Consolas', 'Courier New', monospace; /* 等宽字体 */
+}
+
+/* 计时器按钮组 */
+.timer-controls {
+    margin-top: 30px; /* 上方间距 */
+    display: flex;    
+    gap: 15px;        /* 按钮间距 */
+}
+
+/* 控制按钮基础样式 */
+.control-button {
+    padding: 12px 25px;
+    border: none;
+    border-radius: 6px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s; /* 交互动画 */
+    color: white;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+.control-button:active {
+    transform: scale(0.95); /* 按下缩放效果 */
+}
+#startButton {
+    background-color: #27AE60; /* 默认绿色 */
+}
+#startButton.running {
+    background-color: #C0392B; /* 运行中红色 */
+}
+#stopButton {
+    background-color: #E74C3C; /* 红色停止按钮 */
+}
+#resetButton {
+    background-color: #7F8C8D; /* 灰色重置按钮 */
+}
+
+/* 计时状态文本 */
+.status-text {
+    font-size: 20px;
+    color: #ECF0F1;
+    margin-top: 15px;
+}
+
+/* ============================
+   右侧: 设置区域 settings-panel
+   ============================ */
+.settings-panel {
+    text-align: left; /* 左对齐 */
+    overflow-y: auto; /* 超出内容可滚动 */
+}
+
+.settings-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #FFFFFF;
+    margin-bottom: 30px;
+    text-align: center;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+    padding-bottom: 15px;
+}
+
+.setting-group {
+    margin-bottom: 25px; /* 各设置项间距 */
+}
+
+label {
+    display: block;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #ECF0F1;
+}
+
+select, input[type="number"], input[type="text"] {
+    width: 100%;   /* 占满父容器宽度 */
+    padding: 12px;
+    border: 1px solid #444;
+    border-radius: 6px;
+    box-sizing: border-box;
+    font-size: 16px;
+    background-color: rgba(0, 0, 0, 0.4);
+    color: #FFFFFF;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+select option {
+    background-color: #333333;
+    color: #FFFFFF;
+}
+
+/* 自定义休息时长输入框，初始隐藏 */
+#break-duration-group {
+    display: none;
+}
+
+/* ============================
+   底部进度条
+   ============================ */
+.progress-title {
+    font-size: 16px;
+    color: #ECF0F1;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.progress-bar-container {
+    width: 100%;
+    height: 18px;
+    background-color: rgba(255, 255, 255, 0.2); /* 底色 */
+    border-radius: 9px; /* 圆角 */
+    position: relative; /* 为内部 marker 定位 */
+}
+
+.progress-fill {
+    height: 100%;
+    width: 0%; /* 初始宽度 */
+    background-color: #3498DB;
+    border-radius: 9px;
+    transition: width 0.5s ease-out; /* 平滑动画 */
+}
+
+.task-markers {
+    position: absolute; /* marker 绝对定位在进度条上 */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.marker {
+    position: absolute;
+    height: 150%;  /* 高度稍微超出进度条 */
+    width: 4px;
+    background-color: #E74C3C;
+    transform: translateY(-25%); /* 垂直居中 */
+    border-radius: 2px;
+    z-index: 10; /* 确保覆盖在进度条上方 */
+}
+</style>
+
+
+
+</head>
+<body>
+
+<div class="focus-container">
+ 
+<div class="top-section">
+ 
+<div class="panel timer-panel">
+<i class="fas fa-hourglass-half timer-icon" id="timerIcon"></i>
+<div id="currentTime" class="time-display">25:00</div>
+<div id="timerStatus" class="status-text">专注计时已停止</div>
+
+<div class="timer-controls">
+<button class="control-button" id="startButton">
+<i class="fas fa-play"></i> 开始专注
+</button>
+<button class="control-button" id="stopButton">
+<i class="fas fa-stop"></i> 停止专注
+</button>
+<button class="control-button" id="resetButton">
+<i class="fas fa-redo"></i> 重置计时器
+</button>
+</div>
+</div>
+
+<div class="panel settings-panel">
+<div class="settings-title">专注模式</div>
+ 
+<div class="setting-group">
+<label for="mode-select">选择模式</label>
+<select id="mode-select">
+<option value="pomodoro">番茄工作法 (25/5)</option>
+<option value="deep-work">深度工作 (90/15)</option>
+<option value="break">休息模式 (10分钟)</option>
+<option value="custom">自定义模式</option>
+</select>
+</div>
+
+<div class="setting-group">
+<label for="task-input">当前专注任务</label>
+<input type="text" id="task-input" value="编写新的前端布局代码">
+</div>
+
+<div class="setting-group">
+<label for="duration-input">专注时长 (分钟)</label>
+<input type="number" id="duration-input" value="25" min="1" max="180">
+</div>
+ 
+<div class="setting-group" id="break-duration-group">
+<label for="break-duration-input">休息时长 (分钟)</label>
+<input type="number" id="break-duration-input" value="5" min="1" max="60">
+</div>
+</div>
+ 
+</div>
+
+<div class="bottom-section">
+<div class="progress-title" id="progressTitle">任务时间轴 (当前专注: 25分钟)</div>
+ 
+<div class="progress-bar-container">
+<div class="progress-fill" id="progressBarFill"></div>
+ 
+<div class="task-markers" id="taskMarkers">
+<div class="marker" style="left: 20%; background-color: #F1C40F;" title="分心/聊天"></div>
+<div class="marker" style="left: 75%; background-color: #9B59B6;" title="小休息"></div>
+</div>
+</div>
+</div>
+
+</div>
+
+<script>
+// 全局变量 - 专注会话数据
+let focusSession = {
+    taskName: '',
+    startTime: null,
+    endTime: null,
+    focusDuration: 0,  // 分钟
+    breakDuration: 0,  // 分钟
+    isCompleted: false
+};
+
+// API调用函数
+/**
+ * 保存专注会话记录到Bridge
+ */
+async function saveFocusSession(taskName, duration, breakDuration, startTime, endTime, completed) {
+    try {
+        const sessionData = {
+            taskName: taskName,
+            startTime: startTime,    // ISO格式时间字符串
+            endTime: endTime,        // ISO格式时间字符串
+            focusDuration: duration, // 分钟
+            breakDuration: breakDuration, // 分钟
+            isCompleted: completed
+        };
+        
+        console.log("保存专注会话记录", sessionData);
+        
+        // 使用Bridge发送完整的会话数据
+        try {
+            await Bridge.send('saveFocusSession', sessionData);
+            console.log("专注会话记录保存成功");
+            return { success: true };
+        } catch (bridgeError) {
+            console.warn("Bridge调用失败，仅记录到控制台:", bridgeError.message);
+            // 调用失败时继续执行，不影响用户体验
+        }
+        
+        return { success: true };
+    } catch (error) {
+        console.error("保存专注会话记录失败:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * 加载专注设置
+ */
+async function loadFocusSettings() {
+    try {
+        console.log("加载专注设置");
+        
+        // 默认设置
+        let settings = {
+            mode: 'pomodoro',
+            duration: 25,
+            breakDuration: 5,
+            lastTask: "编写新的前端布局代码"
+        };
+        
+        // 尝试通过Bridge加载设置
+        try {
+            const response = await Bridge.send('loadFocusSettings', null, true);
+            if (response) {
+                settings = {
+                    mode: response.mode || 'pomodoro',
+                    duration: response.duration || 25,
+                    breakDuration: response.breakDuration || 5,
+                    lastTask: response.lastTask || "编写新的前端布局代码"
+                };
+                console.log("成功从Bridge加载专注设置");
+            } else {
+                console.log("Bridge返回设置为空，使用默认设置");
+            }
+        } catch (error) {
+            console.warn("Bridge调用失败，使用默认设置:", error.message);
+        }
+        
+        // 应用设置
+        if (settings.mode) {
+            document.getElementById('mode-select').value = settings.mode;
+            document.getElementById('mode-select').dispatchEvent(new Event('change'));
+        }
+        if (settings.duration) {
+            document.getElementById('duration-input').value = settings.duration;
+        }
+        if (settings.breakDuration) {
+            document.getElementById('break-duration-input').value = settings.breakDuration;
+        }
+        if (settings.lastTask) {
+            document.getElementById('task-input').value = settings.lastTask;
+        }
+        
+        console.log("专注设置加载成功");
+        return settings;
+    } catch (error) {
+        console.error("加载专注设置失败:", error);
+        return null;
+    }
+}
+
+/**
+ * 保存专注设置
+ */
+async function saveFocusSettings(settings) {
+    try {
+        console.log("保存专注设置", settings);
+        
+        // 使用Bridge保存设置
+        try {
+            await Bridge.send('saveFocusSettings', settings);
+            console.log("专注设置保存成功");
+            return { success: true };
+        } catch (error) {
+            console.warn("Bridge调用失败，设置未保存到服务器:", error.message);
+            // 调用失败时继续执行，不影响用户体验
+        }
+        
+        return { success: true };
+    } catch (error) {
+        console.error("保存专注设置失败:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+// 加载专注设置
+await loadFocusSettings();
+
+// 变量声明
+const timeDisplay = document.getElementById('currentTime');
+const statusText = document.getElementById('timerStatus');
+const progressBarFill = document.getElementById('progressBarFill');
+const startButton = document.getElementById('startButton');
+const stopButton = document.getElementById('stopButton');
+const resetButton = document.getElementById('resetButton');
+const modeSelect = document.getElementById('mode-select');
+const durationInput = document.getElementById('duration-input');
+const breakDurationGroup = document.getElementById('break-duration-group');
+const breakDurationInput = document.getElementById('break-duration-input');
+const progressTitle = document.getElementById('progressTitle');
+const timerIcon = document.getElementById('timerIcon');
+const taskInput = document.getElementById('task-input');
+
+let isRunning = false;
+let isPaused = false;
+let totalDuration = 25 * 60; // 默认 25 分钟，以秒为单位
+let remainingTime = totalDuration;
+let timerInterval;
+
+// --- 模式切换逻辑 ---
+const modes = {
+'pomodoro': { focus: 25, break: 5, status: "番茄工作法" },
+'deep-work': { focus: 90, break: 15, status: "深度工作模式" },
+'break': { focus: 10, break: 0, status: "休息时间" },
+'custom': { focus: 25, break: 5, status: "自定义模式" }
+};
+
+modeSelect.addEventListener('change', () => {
+const selectedMode = modeSelect.value;
+const mode = modes[selectedMode];
+
+if (selectedMode === 'custom') {
+// 自定义模式：显示休息时长输入框
+breakDurationGroup.style.display = 'block';
+durationInput.readOnly = false;
+breakDurationInput.readOnly = false;
+} else {
+// 预设模式：隐藏休息时长，设置预设值
+breakDurationGroup.style.display = 'none';
+durationInput.value = mode.focus;
+breakDurationInput.value = mode.break;
+durationInput.readOnly = true;
+breakDurationInput.readOnly = true;
+}
+
+if (!isRunning && !isPaused) {
+// 如果计时器未启动，则更新显示
+totalDuration = parseInt(durationInput.value) * 60;
+remainingTime = totalDuration;
+updateDisplay();
+}
+});
+
+// 当自定义时长变化时，更新总时长
+durationInput.addEventListener('input', () => {
+if (!isRunning && !isPaused) {
+totalDuration = parseInt(durationInput.value) * 60;
+remainingTime = totalDuration;
+updateDisplay();
+}
+});
+
+// --- 计时器控制函数 ---
+
+/**
+* 修正: 始终格式化为 HH:MM:SS 格式（共8个字符），以确保宽度一致性。
+* 例如： 25:00 -> 00:25:00, 90:00 -> 01:30:00
+*/
+function formatTime(seconds) {
+const h = Math.floor(seconds / 3600);
+const m = Math.floor((seconds % 3600) / 60);
+const s = seconds % 60;
+ 
+// 始终返回 HH:MM:SS 格式，确保显示宽度固定
+return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+}
+
+function updateDisplay() {
+// 更新时间显示
+timeDisplay.textContent = formatTime(remainingTime);
+ 
+// 更新进度条
+const progressPercent = ((totalDuration - remainingTime) / totalDuration) * 100;
+progressBarFill.style.width = `${Math.min(100, progressPercent).toFixed(2)}%`;
+ 
+// 更新标题
+progressTitle.textContent = `任务时间轴 (当前专注: ${durationInput.value}分钟)`;
+
+if (remainingTime <= 0) {
+stopTimer(true); // 计时结束，自动停止
+}
+}
+
+function startTimer() {
+// 如果是暂停状态，继续
+if (isPaused) {
+    isPaused = false;
+    statusText.textContent = `🚀 正在专注: ${taskInput.value}`;
+    startButton.innerHTML = '<i class="fas fa-pause"></i> 暂停专注';
+    startButton.classList.add('running');
+    timerIcon.style.animationPlayState = 'running';
+ 
+} else if (!isRunning) {
+    // 全新开始
+    const durationValue = parseInt(durationInput.value);
+    if (isNaN(durationValue) || durationValue <= 0) {
+        console.error("专注时长必须大于 0 分钟。");
+        return;
+    }
+    
+    // 初始化专注会话数据
+    focusSession = {
+        taskName: taskInput.value,
+        startTime: new Date().toISOString(),
+        endTime: null,
+        focusDuration: durationValue,
+        breakDuration: parseInt(breakDurationInput.value),
+        isCompleted: false
+    };
+    
+    totalDuration = durationValue * 60;
+    remainingTime = totalDuration;
+    isRunning = true;
+    isPaused = false;
+ 
+    statusText.textContent = `🚀 正在专注: ${taskInput.value}`;
+    startButton.innerHTML = '<i class="fas fa-pause"></i> 暂停专注';
+    startButton.classList.add('running');
+    timerIcon.style.animationPlayState = 'running';
+ 
+    // 初始化进度条
+    progressBarFill.style.width = `0%`;
+} else {
+    // 正在运行，点击暂停
+    isPaused = true;
+    statusText.textContent = "⏸️ 专注已暂停";
+    startButton.innerHTML = '<i class="fas fa-play"></i> 继续专注';
+    startButton.classList.remove('running');
+    timerIcon.style.animationPlayState = 'paused';
+}
+ 
+// 设置或清除计时器
+if (isRunning && !isPaused) {
+timerInterval = setInterval(() => {
+remainingTime--;
+updateDisplay();
+}, 1000);
+} else {
+clearInterval(timerInterval);
+}
+}
+
+function stopTimer(finished = false) {
+clearInterval(timerInterval);
+ 
+// 设置结束时间并保存会话记录
+if (isRunning && focusSession.startTime) {
+    focusSession.endTime = new Date().toISOString();
+    focusSession.isCompleted = finished;
+    
+    // 保存专注会话记录
+    saveFocusSession(
+        focusSession.taskName,
+        focusSession.focusDuration,
+        focusSession.breakDuration,
+        focusSession.startTime,
+        focusSession.endTime,
+        focusSession.isCompleted
+    );
+}
+ 
+isRunning = false;
+isPaused = false;
+ 
+// 重置时间为初始设置值
+totalDuration = parseInt(durationInput.value) * 60;
+remainingTime = totalDuration;
+
+startButton.innerHTML = '<i class="fas fa-play"></i> 开始专注';
+startButton.classList.remove('running');
+startButton.style.backgroundColor = '#27AE60'; // 重置为绿色
+timerIcon.style.animationPlayState = 'paused';
+
+if (finished) {
+    statusText.textContent = `✅ 专注完成！休息时间: ${breakDurationInput.value}分钟`;
+    console.log("专注时间到！");
+} else {
+    statusText.textContent = "🛑 专注计时已停止";
+}
+
+updateDisplay();
+}
+ 
+// --- 事件绑定 ---
+startButton.addEventListener('click', startTimer);
+stopButton.addEventListener('click', () => stopTimer(false));
+
+// 重置按钮功能 - 仅重置计时器状态，不停止会话
+resetButton.addEventListener('click', function() {
+    // 如果计时器正在运行，先停止并保存
+    if (isRunning || isPaused) {
+        stopTimer(false);
+    }
+    
+    // 重置UI显示
+    startButton.innerHTML = '<i class="fas fa-play"></i> 开始专注';
+    startButton.classList.remove('running');
+    startButton.style.backgroundColor = '#27AE60';
+    timerIcon.style.animationPlayState = 'paused';
+    statusText.textContent = "专注计时已停止";
+    
+    // 重置会话数据
+    focusSession = {
+        taskName: '',
+        startTime: null,
+        endTime: null,
+        focusDuration: 0,
+        breakDuration: 0,
+        isCompleted: false
+    };
+    
+    console.log("计时器已重置");
+});
+
+// 监听设置变化并保存
+modeSelect.addEventListener('change', function() {
+    const settings = {
+        mode: this.value,
+        duration: parseInt(durationInput.value),
+        breakDuration: parseInt(breakDurationInput.value),
+        lastTask: document.getElementById('task-input').value
+    };
+    saveFocusSettings(settings);
+});
+
+durationInput.addEventListener('change', function() {
+    if (!isRunning && !isPaused) {
+        const settings = {
+            mode: modeSelect.value,
+            duration: parseInt(this.value),
+            breakDuration: parseInt(breakDurationInput.value),
+            lastTask: document.getElementById('task-input').value
+        };
+        saveFocusSettings(settings);
+    }
+});
+
+breakDurationInput.addEventListener('change', function() {
+    const settings = {
+        mode: modeSelect.value,
+        duration: parseInt(durationInput.value),
+        breakDuration: parseInt(this.value),
+        lastTask: document.getElementById('task-input').value
+    };
+    saveFocusSettings(settings);
+});
+
+document.getElementById('task-input').addEventListener('change', function() {
+    const settings = {
+        mode: modeSelect.value,
+        duration: parseInt(durationInput.value),
+        breakDuration: parseInt(breakDurationInput.value),
+        lastTask: this.value
+    };
+    saveFocusSettings(settings);
+});
+ 
+// 初始化显示
+updateDisplay();
+});
+</script>
+</body>
+</html>

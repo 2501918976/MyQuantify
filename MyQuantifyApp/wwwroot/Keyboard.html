@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>核心键盘按键热力图：按日统计 - 深色简洁版</title>
+    <link rel="stylesheet" href="common-style.css">
+    <script src="bridge.js"></script>
+    <style>
+        /* 键盘热力图特定样式 */
+        /* 调整整体容器居中 */
+        .main-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .keyboard-container {
+            max-width: 1200px;
+            width: 100%;
+            padding: 20px;
+        }
+
+        /* 键盘行样式 */
+        .keyboard-row {
+            display: flex;
+            margin-bottom: 8px;
+            justify-content: center;
+        }
+
+        /* 放大键盘按键 */
+        .key {
+            min-width: 65px;
+            height: 65px;
+            background-color: var(--key-color, #f0f0f0);
+            color: #333;
+            border: none;
+            border-radius: 5px;
+            margin: 3px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: default;
+            user-select: none;
+            transition: all 0.2s ease;
+            position: relative;
+            font-size: 17px;
+            font-weight: 500;
+            box-shadow: 0 3px 0 var(--key-shadow, #ccc);
+            padding: 0 8px;
+        }
+
+        .key:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 0 var(--key-shadow, #aaa);
+        }
+
+        .key-main {
+            font-size: 16px;
+            margin-bottom: 2px;
+            color: #333;
+        }
+
+        .key-count {
+            font-size: 11px; 
+            color: #f0f0f0; 
+            background-color: rgba(0, 0, 0, 0.5); 
+            padding: 1px 4px; 
+            border-radius: 2px;
+            line-height: 1;
+            font-weight: normal;
+        }
+
+        .space-key { width: 450px; } 
+        .shift-key { width: 140px; } 
+        .enter-key { width: 130px; } 
+        .tab-key { width: 95px; }        .backspace-key { width: 105px; } 
+        .caps-key { width: 120px; }        .ctrl-key, .alt-key, .win-key { width: 85px; }        .backslash-key { width: 95px; }
+
+        /* ======================================================= */
+        /* --- 3. 数据切换 --- */
+        /* ======================================================= */
+        .controls-and-legend {
+            width: 100%;
+            max-width: 1100px; 
+            display: flex;
+            justify-content: flex-end; 
+            align-items: center;
+            margin-bottom: 20px;
+            color: #f0f0f0; 
+        }
+
+        .data-selector-container {
+            display: flex;
+            align-items: center;
+            font-size: 15px;
+        }
+
+        #date-selector {
+            padding: 8px 12px; 
+            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background-color: rgba(0, 0, 0, 0.3); 
+            color: #f0f0f0; 
+            font-size: 15px;
+            cursor: pointer;
+            appearance: none; 
+            font-family: inherit;
+        }
+    </style>
+</head>
+<body>
+
+<div class="main-wrapper">
+    <div class="keyboard-container">
+        <h1>核心键盘按键热力图</h1>
+        
+        <div class="controls-and-legend">
+            <div class="data-selector-container">
+                <span>选择日期：&nbsp;</span>
+                <input type="date" id="date-selector">
+            </div>
+        </div>
+
+        <div class="keyboard-layout">
+        </div>
+    </div>
+</div>
+
+<script>
+    /**
+     * 加载键盘数据
+     */
+async function loadKeyboardData(date) {
+    try {
+        console.log(`正在通过Bridge加载${date}的键盘数据...`);
+        
+        // 构造要发送给 C# 的消息对象
+        const command = 'getKeyboardData';
+        const params = { date: date };
+        
+        // ⭐️ 新增打印：打印发送给 C# 的消息
+        console.log(`[Bridge.send] 发送命令: ${command}, 参数: ${JSON.stringify(params)}`);
+
+        // 尝试从Bridge获取数据
+        try {
+            // Bridge.send 的第三个参数 true 表示这是一个请求，需要返回 _reqId
+            const response = await Bridge.send(command, params, true);
+
+            // ⭐️ 核心修改：打印收到的数据
+            console.log("【Bridge.receive】成功接收数据：", response); 
+            
+            if (response && response.data && Object.keys(response.data).length > 0) { // 检查 response.data 是否存在且非空
+                console.log("成功从Bridge获取数据");
+                // 确保传递给 renderKeyboard 的是 data 对象
+                renderKeyboard(response.data, `当前日期: ${date}`);
+            } else {
+                console.log("Bridge返回数据为空或格式不正确");
+                // 不使用模拟数据，使用空对象
+                renderKeyboard({}, `当前日期: ${date}`);
+            }
+        } catch (bridgeError) {
+            console.warn("Bridge调用失败:", bridgeError.message);
+            // 调用失败时也不使用模拟数据
+            renderKeyboard({}, `当前日期: ${date}`);
+        }
+    } catch (error) {
+        console.error("加载键盘数据失败:", error);
+        document.querySelector('.keyboard-layout').innerHTML = 
+            '<div style="text-align:center; color:#ccc; padding:50px;">加载数据失败</div>';
+    }
+}
+    
+    const keyboardLayout = [
+        ['`', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'Backspace'],
+        ['Tab', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '[', ']', '\\'],
+        ['Caps Lock', 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', "'", 'Enter'],
+        ['ShiftLeft', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', ',', '.', '/', 'ShiftRight'],
+        ['CtrlLeft', 'Win', 'AltLeft', 'Space', 'AltRight', 'Menu', 'CtrlRight']
+    ];
+    
+    // --- 颜色辅助函数 (保持不变) ---
+    function getColorForCount(count, maxCount) {
+        const normalized = maxCount > 0 ? count / maxCount : 0;
+        const colorRatio = normalized; 
+        const hue = 0; 
+        const saturation = 0; 
+        const lightness = 95 - (colorRatio * 45); 
+        return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+    }
+
+    function darken(hsl, percent) {
+        const parts = hsl.match(/\d+/g).map(Number);
+        if (parts.length === 3) {
+            let h = parts[0];
+            let s = parts[1];
+            let l = parts[2];
+            l = Math.max(0, l - percent); 
+            return `hsl(${h}, ${s}%, ${l}%)`;
+        }
+        return '#ccc'; 
+    }
+    // ---------------------------------
+
+    /**
+     * 【核心修改】：通过 C# 传入数据来渲染键盘
+     * @param {object} rawData - 包含按键点击次数的原始对象 { KeyName: Count, ... }
+     * @param {string} periodName - 数据的日期范围描述
+     */
+    function renderKeyboard(rawData, periodName) {
+        
+        // ⭐️ 核心数据预处理：将后端键名映射到前端布局键名
+        const data = {};
+        for (const key in rawData) {
+            let standardizedKey = key;
+
+            // 1. 处理字母键（后端已经转大写，此处保险起见再转一次）
+            if (key.length === 1 && key.match(/[a-zA-Z]/)) {
+                standardizedKey = key.toUpperCase();
+            } 
+            // 2. 处理数字键（数字键 "1" "2" 等，后端返回的可能是数字属性 1, 2）
+            else if (key.length >= 1 && key.match(/^[0-9]$/)) {
+                // 键名是数字字符串，保持原样（如 '1', '2'）
+                standardizedKey = key;
+            }
+            // 3. 处理符号键映射：
+            // 后端数据键（key）可能来自 KeyCode/Value，与实际字符键名不一致
+            else if (key.length === 1) {
+                // 常见符号映射（根据数据库存储/KeyCode映射情况调整）
+                const symbolMap = {
+                    // C# KeyCode/Value -> HTML 键名
+                    ':': ';',        // 冒号数据 应该分配给 分号键
+                    '"': "'",        // 双引号数据 应该分配给 单引号键
+                    // 如果 `Backslash` 在后端被保存为 `\`，则不需要处理
+                    // 如果 `Grave` 在后端被保存为 ```，则不需要处理
+                };
+                standardizedKey = symbolMap[key] || key;
+            }
+            // 4. 处理多字符功能键（Backspace, Tab, Enter 等）
+            // 保持原样，假设它们已经与 keyboardLayout 中的定义匹配
+
+            // 累加或赋值
+            const count = rawData[key];
+            data[standardizedKey] = (data[standardizedKey] || 0) + count;
+        }
+
+        // --- 开始渲染逻辑 ---
+        const container = document.querySelector('.keyboard-layout');
+        container.innerHTML = ''; 
+
+        const counts = Object.values(data);
+        const maxCount = counts.length > 0 ? Math.max(...counts) : 0;
+        let totalCount = counts.reduce((sum, count) => sum + count, 0);
+        let maxKey = '';
+
+        // 查找最热键
+        for (const keyLabel in data) {
+            if (data[keyLabel] > (data[maxKey] || 0)) {
+                maxKey = keyLabel;
+            }
+        }
+
+        keyboardLayout.forEach(rowKeys => {
+            const row = document.createElement('div');
+            row.className = 'keyboard-row';
+            
+            rowKeys.forEach(keyLabel => {
+                const keyElement = document.createElement('div');
+                keyElement.className = 'key';
+                
+                // ⭐️ 从处理后的数据对象中获取点击次数
+                const count = data[keyLabel] || 0; 
+                
+                // 设置热力图颜色 (使用白灰渐变)
+                const keyColor = getColorForCount(count, maxCount);
+                const lValue = keyColor.match(/\d+/g)[2] || 95;
+                const shadowL = Math.max(40, lValue - 10);
+                const keyShadow = `hsl(0, 0%, ${shadowL}%)`;
+                
+                keyElement.style.setProperty('--key-color', keyColor);
+                keyElement.style.setProperty('--key-shadow', keyShadow);
+                keyElement.style.backgroundColor = keyColor; 
+                
+                // 确定按键计数文本和背景色
+                let countTextColor = '#f0f0f0';
+                let countBgColor = 'rgba(0, 0, 0, 0.5)';
+                if (count / maxCount < 0.3) { 
+                    countTextColor = '#333';
+                    countBgColor = 'rgba(255, 255, 255, 0.6)';
+                }
+
+                // 添加特殊键的 CSS 类和修正标签
+                const keyClassMap = {
+                    'Space': 'space-key', 'ShiftLeft': 'shift-key', 'ShiftRight': 'shift-key',
+                    'Enter': 'enter-key', 'Tab': 'tab-key', 'Backspace': 'backspace-key',
+                    'Caps Lock': 'caps-key', '\\': 'backslash-key', 'CtrlLeft': 'ctrl-key', 
+                    'CtrlRight': 'ctrl-key', 'AltLeft': 'alt-key', 'AltRight': 'alt-key',
+                    'Win': 'win-key', 'Menu': 'win-key'
+                };
+                const cssClass = keyClassMap[keyLabel] || (keyLabel.length > 1 ? keyClassMap[keyLabel.split(' ')[0]] : '');
+                if (cssClass) {
+                    keyElement.classList.add(cssClass);
+                }
+                const displayLabel = {
+                    'ShiftLeft': 'Shift', 'ShiftRight': 'Shift', 'CtrlLeft': 'Ctrl',
+                    'CtrlRight': 'Ctrl', 'AltLeft': 'Alt', 'AltRight': 'Alt',
+                    'Caps Lock': 'Caps', 'Backspace': 'Back', 'Win': 'Win',
+                    'Menu': 'Menu'
+                }[keyLabel] || keyLabel;
+
+
+                // 添加主标签
+                const mainLabel = document.createElement('span');
+                mainLabel.className = 'key-main';
+                mainLabel.textContent = displayLabel;
+                mainLabel.style.color = '#333';
+                keyElement.appendChild(mainLabel);
+
+                // 添加次数
+                const countLabel = document.createElement('span');
+                countLabel.className = 'key-count';
+                countLabel.textContent = count.toLocaleString(); 
+                countLabel.style.color = countTextColor;
+                countLabel.style.backgroundColor = countBgColor;
+
+                keyElement.appendChild(countLabel);
+
+                keyElement.setAttribute('data-count', count);
+                row.appendChild(keyElement);
+            });
+            
+            container.appendChild(row);
+        });
+        
+        // 【可选】：如果需要，可以在标题中显示日期
+        document.querySelector('h1').textContent = `核心键盘按键热力图 (${periodName})`;
+    }
+    /**
+     * 【供 C# 调用的全局函数】：接收并更新数据
+     * C# 调用示例: await webView.ExecuteScriptAsync("updateKeyboardData('{\"date\":\"2025-10-07\", \"data\":{...}}')");
+     * @param {string} jsonDataStr - JSON 格式的字符串数据
+     */
+    // 保留原有函数以保证向后兼容性
+    window.updateKeyboardData = function(jsonDataStr) {
+        try {
+            const dataObj = JSON.parse(jsonDataStr);
+            if (dataObj && dataObj.data) {
+                // 更新日期选择器
+                const dateInput = document.getElementById('date-selector');
+                dateInput.value = dataObj.date;
+
+                // 渲染键盘
+                renderKeyboard(dataObj.data, `当前日期: ${dataObj.date}`);
+            }
+        } catch (e) {
+            console.error("解析键盘数据失败:", e);
+        }
+    }
+    
+    // 初始化和事件监听
+    document.addEventListener('DOMContentLoaded', async function() {
+        const dateInput = document.getElementById('date-selector');
+        
+        // 默认设置为今天
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.value = today;
+        
+        // 显示初始加载状态
+        document.querySelector('.keyboard-layout').innerHTML =
+            '<div style="text-align:center; color:#ccc; padding:50px;">正在加载数据...</div>';
+        
+        // 初始加载数据
+        await loadKeyboardData(today);
+        
+        // 监听日期变化
+        dateInput.addEventListener('change', async function() {
+            const selectedDate = this.value;
+            if (selectedDate) {
+                // 显示加载状态
+                document.querySelector('.keyboard-layout').innerHTML =
+                    '<div style="text-align:center; color:#ccc; padding:50px;">正在加载数据...</div>';
+                
+                // 加载选中日期的数据
+                await loadKeyboardData(selectedDate);
+            }
+        });
+    });
+</script>
+
+</body>
+</html>

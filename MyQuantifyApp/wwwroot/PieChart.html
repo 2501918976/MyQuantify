@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>活动与应用时间占比概览 (动态)</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <!-- 假设 bridge.js 文件已存在于同一目录下 -->
+    <script src="bridge.js"></script>
+
+    <style>
+        /* =======================================================
+         * 统一布局与基础样式 - 适应800高，1300宽的容器 (用户提供的通用样式)
+         * ======================================================= */
+
+        /* 全局重置与基础样式 */
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, Arial, sans-serif;
+            color: #f0f0f0; /* 默认使用白色字体 */
+            background-color: transparent !important; /* 确保背景完全透明 */
+            width: 100%;
+            height: 100%;
+            overflow: auto; /* 允许滚动，只在需要时显示滚动条 */
+            font-size: 14px;
+        }
+
+        body {
+            /* 毛玻璃透明效果应用于body */
+            background-color: transparent !important; 
+            backdrop-filter: blur(10px);
+        }
+
+        /* 主容器样式 - 适应本页面的固定尺寸 1270x720，并应用通用容器样式 */
+        .main-container {
+            width: 1270px; 
+            height: 720px; 
+            max-width: 1270px;
+            max-height: 720px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            justify-content: space-between; 
+        }
+
+        /* 通用面板样式 - 深色透明毛玻璃效果 */
+        .panel, .chart-container, .dashboard-item, .keyboard-container,
+        .tag-list-panel, .process-list-panel, .chart-panel {
+            background-color: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(5px);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            transition: all 0.3s ease;
+        }
+
+        /* 标题样式 */
+        h1, h2, h3, h4, h5, h6 {
+            color: #f0f0f0;
+            margin: 0 0 15px 0;
+            text-align: center;
+        }
+
+        h1 { font-size: 22px; font-weight: 600; }
+        h2 { font-size: 20px; font-weight: 600; }
+        h3 { font-size: 18px; font-weight: 500; }
+
+        /* 文本样式 */
+        p, label, span { color: #f0f0f0; }
+
+        /* 按钮样式 (省略) */
+
+        /* 输入框样式 (省略) */
+
+        /* 图表相关样式 */
+        .chart-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            flex: 1; /* 确保两行等高 */
+        }
+        .chart-row + .chart-row { 
+            margin-top: 25px; /* 增加行间距 */
+        }
+
+        .chart-container {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 10px; /* 调整内边距，给图表更多空间 */
+        }
+
+        .chart-custom-label, .chart-title {
+            font-size: 14px; /* 略微缩小，更适合图表标题 */
+            font-weight: 600;
+            margin-bottom: 8px;
+            text-align: center;
+            color: #f0f0f0;
+        }
+
+        .chart-placeholder {
+            flex-grow: 1;
+            min-height: 0;
+            min-width: 0;
+        }
+
+        /* 列表样式 (省略) */
+        /* 滚动条样式 (省略) */
+        /* 特殊布局组件样式 (省略) */
+        /* 响应式设计 (省略) */
+    </style>
+</head>
+<body>
+
+<div class="main-container">
+
+    <div class="chart-row">
+        <div class="chart-container"><div id="chart-activity-today" class="chart-placeholder"></div></div>
+        <div class="chart-container"><div id="chart-activity-7day" class="chart-placeholder"></div></div>
+        <div class="chart-container"><div id="chart-activity-30day" class="chart-placeholder"></div></div>
+    </div>
+
+    <div class="chart-row">
+        <div class="chart-container"><div id="chart-app-today" class="chart-placeholder"></div></div>
+        <div class="chart-container"><div id="chart-app-7day" class="chart-placeholder"></div></div>
+        <div class="chart-container"><div id="chart-app-30day" class="chart-placeholder"></div></div>
+    </div>
+
+</div>
+
+<script type="text/javascript">
+    const charts = [];
+    let dailyData = []; 
+
+    // =======================================================
+    // 颜色配置 (已统一为用户指定的白色/透明主题)
+    // =======================================================
+    const AXIS_TEXT_COLOR = '#f0f0f0'; // 统一使用用户指定的白色字体
+
+    // 动态图表颜色
+    const DYNAMIC_COLORS = [
+        '#63B8FF', // 蓝色
+        '#FF9F63', // 橙色
+        '#93CC79', // 绿色
+        '#FF6384', // 红色
+        '#C363FF', // 紫色
+        '#FFE663', // 黄色
+        '#63FFEB', // 青色
+        '#999999'  // 灰色 (用于“其他”)
+    ];
+
+    // =======================================================
+    // 动态图表数据处理：聚合并筛选 TOP N
+    // =======================================================
+
+    /**
+     * 根据日期范围和类型（Activity/App）计算动态图表数据。
+     * @param {number} days 统计天数 (1, 7, 30)
+     * @param {string} type 'Activity' 或 'App'
+     * @returns {{ name: string, value: number }[]} 格式化后的数据数组
+     */
+    function calculateDynamicRatioData(days, type) {
+        if (!dailyData || dailyData.length === 0) {
+            console.warn(`[${type}-${days}D] dailyData 为空，返回无数据。`);
+            return [{ name: `无数据 (${type})`, value: 0 }];
+        }
+        
+        // 从数组末尾切片，确保获取最近的 days 天数据
+        const dataSlice = dailyData.slice(dailyData.length - days);
+        console.log(`--- DEBUG: [${type}-${days}D] ${days} 天切片数据 (dataSlice) ---`, dataSlice);
+
+        // 1. 聚合所有分类的总时间
+        const aggregatedData = {};
+        let totalDuration = 0; 
+        
+        dataSlice.forEach(dailyItem => {
+            const entries = dailyItem.Entries || [];
+            entries.forEach(entry => {
+                // 过滤出指定类型
+                if (entry.Type === type) {
+                    const value = entry.Hours || 0;
+                    aggregatedData[entry.Name] = (aggregatedData[entry.Name] || 0) + value;
+                }
+            });
+        });
+
+        // 重新计算实际的总时长，基于 aggregatedData
+        totalDuration = Object.values(aggregatedData).reduce((sum, value) => sum + value, 0);
+
+        // --- DEBUG: 聚合后的数据 ---
+        console.log(`--- DEBUG: [${type}-${days}D] 聚合数据 (aggregatedData) ---`, aggregatedData);
+
+        if (totalDuration === 0) {
+            return [{ name: `无数据 (${type})`, value: 0 }];
+        }
+
+        // 2. 转换为 { name, value } 结构并处理平均值
+        let finalData = Object.keys(aggregatedData).map(name => {
+            const totalValue = aggregatedData[name];
+            // 计算平均值 (如果 days > 1)
+            const averageValue = days === 1 ? totalValue : totalValue / days; 
+            return {
+                name: name,
+                // 小时数保留一位小数
+                value: parseFloat(averageValue.toFixed(1))
+            };
+        });
+        
+        // --- DEBUG: 计算平均值后的数据 ---
+        console.log(`--- DEBUG: [${type}-${days}D] 平均值数据 (finalData, 未排序/过滤) ---`, finalData);
+
+        // 3. 排序并筛选 Top 3，其余归入“其他”
+        finalData.sort((a, b) => b.value - a.value);
+        
+        const topN = 3; 
+        const topData = finalData.slice(0, topN);
+        const otherData = finalData.slice(topN);
+
+        if (otherData.length > 0) {
+            const otherValue = otherData.reduce((sum, item) => sum + item.value, 0);
+            if (otherValue > 0) {
+                topData.push({
+                    name: "其他",
+                    value: parseFloat(otherValue.toFixed(1))
+                });
+            }
+        }
+        
+        // --- DEBUG: 最终 Top N + 其他数据 ---
+        console.log(`--- DEBUG: [${type}-${days}D] 最终图表数据 (topData) ---`, topData);
+        
+        // 确保空列表返回 0 数据
+        if (topData.length === 0 && totalDuration > 0) {
+             return [{ name: `无数据 (${type})`, value: 0 }];
+        }
+
+        return topData;
+    }
+
+    // =======================================================
+    // ECharts 初始化/更新 - 环形图
+    // =======================================================
+
+    /**
+     * 初始化并配置单个环形图
+     */
+    function initPieChart(chartElementId, title, legendData, dataKey) {
+        const chartElement = document.getElementById(chartElementId);
+        if (!chartElement) return null;
+        
+        const chart = echarts.init(chartElement);
+        
+        let labelDiv = chartElement.parentNode.querySelector('.chart-custom-label');
+        if (!labelDiv) {
+            labelDiv = document.createElement('div');
+            labelDiv.className = 'chart-custom-label';
+            chartElement.parentNode.prepend(labelDiv); 
+        }
+        labelDiv.textContent = `${title} (${dataKey === 'app' ? '应用' : '活动'}时间占比)`;
+
+        const option = {
+            backgroundColor: 'transparent', // 确保背景透明
+            color: DYNAMIC_COLORS, 
+            textStyle: { color: AXIS_TEXT_COLOR }, // 确保所有文本颜色为白色
+            title: { show: false },
+            tooltip: {
+                trigger: 'item',
+                // Tooltip 默认使用浅色背景，文字应为深色以保持可读性
+                textStyle: { color: '#333' }, 
+                formatter: function (params) {
+                    if (params.value === 0) {
+                       return `${params.name}<br/>时长: 0 小时<br/>占比: <strong>0%</strong>`;
+                    }
+                    const hours = params.value.toFixed(1);
+                    return `${params.name}<br/>时长: ${hours} 小时<br/>占比: <strong>${params.percent.toFixed(1)}%</strong>`;
+                }
+            },
+            legend: {
+                orient: 'horizontal', 
+                left: 'center',
+                bottom: 'bottom', 
+                textStyle: { color: AXIS_TEXT_COLOR, fontSize: 11 }, // 使用白色文本
+                itemGap: 10, 
+                data: legendData 
+            },
+            series: [
+                {
+                    name: title,
+                    type: 'pie',
+                    radius: ['35%', '60%'], 
+                    center: ['50%', '45%'], 
+                    data: [], 
+                    label: {
+                        show: true,
+                        formatter: '{d}%', // 只显示百分比
+                        color: AXIS_TEXT_COLOR, // 使用白色文本
+                        fontSize: 12
+                    },
+                    emphasis: {
+                        itemStyle: {
+                            shadowBlur: 10,
+                            shadowOffsetX: 0,
+                            shadowColor: 'rgba(0, 0, 0, 0.5)'
+                        }
+                    }
+                }
+            ]
+        };
+        chart.setOption(option);
+        charts.push(chart);
+        return chart;
+    }
+    
+    // =======================================================
+    // 核心渲染函数：根据全局 dailyData 更新所有图表
+    // =======================================================
+    function updateCharts() {
+        const activityConfig = [
+            { id: 'chart-activity-today', title: '今日' , days: 1, type: 'Activity' }, 
+            { id: 'chart-activity-7day', title: '近 7 日平均', days: 7, type: 'Activity' }, 
+            { id: 'chart-activity-30day', title: '近 30 日平均', days: 30, type: 'Activity' } 
+        ];
+
+        const appConfig = [
+            { id: 'chart-app-today', title: '今日', days: 1, type: 'App' },
+            { id: 'chart-app-7day', title: '近 7 日平均', days: 7, type: 'App' },
+            { id: 'chart-app-30day', title: '近 30 日平均', days: 30, type: 'App' }
+        ];
+        
+        // 渲染活动图表
+        activityConfig.forEach(config => {
+            let chartInstance = charts.find(c => c.getDom().id === config.id);
+            if (!chartInstance) {
+                chartInstance = initPieChart(config.id, config.title, [], 'activity');
+            }
+
+            const finalData = calculateDynamicRatioData(config.days, config.type);
+            const legendData = finalData.map(item => item.name);
+
+            chartInstance.setOption({
+                legend: { data: legendData }, 
+                series: [{ data: finalData }]
+            });
+        });
+
+        // 渲染应用图表
+        appConfig.forEach(config => {
+            let chartInstance = charts.find(c => c.getDom().id === config.id);
+            if (!chartInstance) {
+                chartInstance = initPieChart(config.id, config.title, [], 'app');
+            }
+
+            const finalData = calculateDynamicRatioData(config.days, config.type);
+            const legendData = finalData.map(item => item.name);
+
+            chartInstance.setOption({
+                legend: { data: legendData }, 
+                series: [{ data: finalData }]
+            });
+        });
+        
+        charts.forEach(chart => chart.resize());
+    }
+
+    /**
+     * 使用Bridge加载图表数据
+     */
+    async function loadChartData() {
+        console.log("--- START: 开始加载图表数据 (loadChartData) ---");
+        try {
+            
+            try {
+                // 确保 Bridge.send 被调用
+                console.log("正在通过Bridge请求 getPieChartData...");
+                const response = await Bridge.send('getPieChartData', { days: 30 }, true); 
+                
+                // --- DEBUG: Bridge 收到原始响应 ---
+                console.log("--- DEBUG: Bridge 收到原始响应 (response) ---", response);
+
+                if (response && response.data && Array.isArray(response.data) && response.data.length > 0) {
+                    dailyData = response.data; 
+                    console.log("成功通过Bridge获取动态数据。");
+                    // --- DEBUG: 赋值后的 dailyData ---
+                    console.log("--- DEBUG: 赋值后的 dailyData (包含所有天数和 Entries) ---", dailyData);
+
+                } else {
+                    dailyData = []; 
+                    console.warn("Bridge返回数据为空或无效，将渲染空白图表。");
+                }
+            } catch (bridgeError) {
+                dailyData = [];
+                // 打印完整的错误对象以帮助调试
+                console.error("Bridge通信失败，将渲染空白图表。错误详情:", bridgeError);
+            }
+            
+            // 确保即使数据加载失败，updateCharts 也会被调用以渲染空白图表或现有数据
+            updateCharts();
+            
+            console.log("--- END: 图表数据加载和渲染完成 ---");
+        } catch (error) {
+            console.error("加载图表数据失败:", error);
+            charts.forEach(chart => chart.clear());
+        }
+    }
+
+    function initialize() {
+        // 确保初始化立即执行 loadChartData
+        loadChartData();
+
+        window.addEventListener('resize', function() {
+            charts.forEach(chart => chart.resize());
+        });
+    }
+    
+    // 确保 DOM 加载后执行初始化，解决打开页面无内容的问题
+    document.addEventListener('DOMContentLoaded', initialize);
+
+</script>
+
+</body>
+</html>

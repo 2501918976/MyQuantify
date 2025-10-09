@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>剪贴板历史查询</title>
+    <link rel="stylesheet" href="common-style.css">
+    <script src="bridge.js"></script>
+    <style>
+        .query-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 25px;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .clipboard-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            background-color: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        th, td {
+            padding: 12px 10px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        th {
+            background-color: rgba(255, 255, 255, 0.1);
+            font-weight: bold;
+            color: #ccc;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        td {
+            color: #f0f0f0;
+        }
+
+        tr:hover td {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .col-index {
+            width: 5%;
+        }
+
+        .col-time {
+            width: 15%;
+        }
+
+        .col-length {
+            width: 8%;
+            text-align: center;
+        }
+
+        .col-content {
+            width: 60%;
+        }
+
+        .col-action {
+            width: 12%;
+            text-align: center;
+        }
+
+        .action-button {
+            background: #2ecc71;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.3s;
+        }
+
+            .action-button:hover {
+                background: #27ae60;
+            }
+
+        .full-content-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal-content {
+            background-color: rgba(44, 62, 80, 0.95);
+            padding: 30px;
+            border-radius: 10px;
+            width: 70%;
+            max-height: 70%;
+            overflow-y: auto;
+            color: white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+            .modal-content h3 {
+                margin-top: 0;
+                border-bottom: 1px solid rgba(255,255,255,0.2);
+                padding-bottom: 10px;
+            }
+
+        .close-button {
+            float: right;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #e74c3c;
+            margin-left: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>剪贴板历史查询列表</h1>
+
+        <div class="query-controls">
+            <div class="date-range">
+                <label for="start-date">起始日期:</label>
+                <input type="date" id="start-date">
+                <label for="end-date">结束日期:</label>
+                <input type="date" id="end-date">
+            </div>
+            <button id="query-button">查询</button>
+        </div>
+
+        <div class="clipboard-list">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="col-index">序号</th>
+                        <th class="col-time">复制时间</th>
+                        <th class="col-length">长度</th>
+                        <th class="col-content">复制内容 (预览)</th>
+                        <th class="col-action">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="list-body"></tbody>
+            </table>
+            <p id="no-results" style="text-align:center;color:#ccc;margin-top:20px;display:none;">没有查询到符合条件的记录。</p>
+        </div>
+    </div>
+
+    <div id="full-content-modal" class="full-content-modal" onclick="hideModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <span class="close-button" onclick="hideModal()">&times;</span>
+            <h3>复制内容详情</h3>
+            <p id="modal-text">正在加载...</p>
+        </div>
+    </div>
+
+    <script>
+        let clipboardDataCache = [];
+
+        async function fetchClipboardData(startDate, endDate) {
+            try {
+                const response = await Bridge.send('queryHistory', { startDate, endDate }, true);
+                clipboardDataCache = response || [];
+                renderList(clipboardDataCache);
+                return clipboardDataCache;
+            } catch (error) {
+                console.error("获取剪贴板数据失败:", error);
+                document.getElementById('list-body').innerHTML =
+                    `<tr><td colspan="5" style="text-align:center;color:#e74c3c;">数据加载错误: ${error.message}</td></tr>`;
+                return [];
+            }
+        }
+
+        async function fetchFullContent(id) {
+            try {
+                const response = await Bridge.send('getFullContent', { id }, true);
+                const data = response || "无内容";
+                document.getElementById('modal-text').textContent = data;
+                document.getElementById('full-content-modal').style.display = 'flex';
+                return data;
+            } catch (error) {
+                console.error("获取完整内容失败:", error);
+                document.getElementById('modal-text').textContent = `错误：无法加载完整内容 - ${error.message}`;
+            }
+        }
+
+        function renderList(data) {
+            const listBody = document.getElementById('list-body');
+            const noResults = document.getElementById('no-results');
+            listBody.innerHTML = '';
+
+            if (!data || data.length === 0) {
+                noResults.style.display = 'block';
+                return;
+            }
+            noResults.style.display = 'none';
+
+            data.forEach((item, index) => {
+                const row = listBody.insertRow();
+                const previewContent = item.content && item.content.length > 80
+                    ? item.content.substring(0, 80) + '...'
+                    : item.content;
+                row.innerHTML = `
+                <td class="col-index">${index + 1}</td>
+                <td class="col-time">${item.date}</td>
+                <td class="col-length">${item.length}</td>
+                <td class="col-content">${previewContent}</td>
+                <td class="col-action">
+                    <button class="action-button" onclick="showModal('${item.id}')">查看全文</button>
+                </td>
+            `;
+            });
+        }
+
+        async function filterAndRender() {
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+            if (!startDate || !endDate) return;
+
+            document.getElementById('list-body').innerHTML =
+                '<tr><td colspan="5" style="text-align:center;color:#ccc;">正在加载数据...</td></tr>';
+            document.getElementById('no-results').style.display = 'none';
+
+            await fetchClipboardData(startDate, endDate);
+        }
+
+        function showModal(id) {
+            document.getElementById('modal-text').textContent = '正在请求全文内容...';
+            document.getElementById('full-content-modal').style.display = 'flex';
+            fetchFullContent(id);
+        }
+
+        function hideModal() {
+            document.getElementById('full-content-modal').style.display = 'none';
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(endDate.getDate() - 1);
+
+            const formatDate = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            document.getElementById('end-date').value = formatDate(endDate);
+            document.getElementById('start-date').value = formatDate(startDate);
+
+            document.getElementById('query-button').addEventListener('click', filterAndRender);
+
+            filterAndRender();
+
+            window.showModal = showModal;
+            window.hideModal = hideModal;
+        });
+    </script>
+
+</body>
+</html>

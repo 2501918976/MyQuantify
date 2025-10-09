@@ -6,70 +6,151 @@
         xmlns:hc="https://handyorg.github.io/handycontrol"
         xmlns:local="clr-namespace:MyQuantifyApp"
         mc:Ignorable="d"
-        Title="MainWindow" Height="800" Width="1200">
-    <!-- 主布局 Grid: 上 (Header), 中 (Content) -->
+        Title="MainWindow" Height="800" Width="1300"
+        WindowStyle="None" 
+        AllowsTransparency="True"
+        ResizeMode="CanResize">
+    <Window.Resources>
+        <Style x:Key="WindowControlButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Width" Value="40"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#30FFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CloseButton" TargetType="Button" BasedOn="{StaticResource WindowControlButton}">
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#E81123"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="TransparentButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontFamily" Value="KaiTi"/>
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="Padding" Value="30,3"/>
+            <Setter Property="Margin" Value="0,0,35,0"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#40FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#60FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="#80FFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Storyboard x:Key="FadeInNav">
+            <DoubleAnimation Storyboard.TargetProperty="Opacity" 
+                             To="1" 
+                             Duration="0:0:0.3"/>
+        </Storyboard>
+
+        <Storyboard x:Key="FadeOutNav">
+            <DoubleAnimation Storyboard.TargetProperty="Opacity" 
+                             To="0" 
+                             Duration="0:0:0.3"/>
+        </Storyboard>
+
+    </Window.Resources>
+
+    <Window.Background>
+        <ImageBrush ImageSource="pack://application:,,,/assets/pic/focusback1.jpg"
+                    Stretch="UniformToFill"/>
+    </Window.Background>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="50"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- ============================== 上部 Header ============================== -->
-        <Grid Grid.Row="0">
-            <!-- 蓝色背景 -->
-            <Border Background="#12BDCF" />
+        <Grid x:Name="TitleBarGrid" Grid.Row="0" Background="Transparent" 
+              MouseLeftButtonDown="TitleBarGrid_MouseLeftButtonDown"
+              MouseEnter="TitleBarGrid_MouseEnter"
+              MouseLeave="TitleBarGrid_MouseLeave">
 
-            <!-- 左右布局：左边按钮，右边 Logo -->
             <Grid Margin="20,0,20,0">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <!-- 左边按钮 -->
                     <ColumnDefinition Width="Auto"/>
-                    <!-- 右边 Logo -->
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- 左边按钮组：使用 Margin 属性增加按钮间距 -->
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Grid.Column="0" HorizontalAlignment="Left">
-
-                    <Button Content="专注" Background="#12BDCF" Foreground="White" hc:BorderElement.CornerRadius="15"
-                        Margin="0,0,15,0"
-                        Command="{Binding ShowPageCommand}"
-                        CommandParameter="FocusView"/>
-
-                    <Button Content="今日数据" Background="#12BDCF" Foreground="White" hc:BorderElement.CornerRadius="15"
-                        Margin="0,0,15,0"
-                        Command="{Binding ShowPageCommand}"
-                        CommandParameter="DailyReportView"/>
-
-                    <Button Content="本周数据" Background="#12BDCF" Foreground="White" hc:BorderElement.CornerRadius="15"
-                        Margin="0,0,15,0"
-                        Command="{Binding ShowPageCommand}"
-                        CommandParameter="WeeklyReportView"/>
-
-                    <Button Content="本月数据" Background="#12BDCF" Foreground="White" hc:BorderElement.CornerRadius="15"
-                        Margin="0,0,15,0"
-                        Command="{Binding ShowPageCommand}"
-                        CommandParameter="MonthlyReportView"/>
-
-                    <Button Content="设置" Background="#12BDCF" Foreground="White" hc:BorderElement.CornerRadius="15"
-                        Command="{Binding ShowPageCommand}"
-                        CommandParameter="SettingsView"/>
-
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,20,0">
+                    <TextBlock Text="&#xE100;" 
+                               FontFamily="Segoe MDL2 Assets" 
+                               FontSize="20" 
+                               Foreground="White" 
+                               VerticalAlignment="Center"
+                               Margin="0,0,5,0"/>
+                    <TextBlock Text="量化生活助手" 
+                               FontSize="18" 
+                               Foreground="White" 
+                               FontWeight="Bold"
+                               VerticalAlignment="Center"/>
                 </StackPanel>
 
+                <StackPanel x:Name="NavPanel" 
+                            Grid.Column="1" 
+                            Opacity="0" 
+                            Orientation="Horizontal" 
+                            HorizontalAlignment="Right" 
+                            VerticalAlignment="Center" Cursor="">
+                    <!--<Button Content="专注模式" Style="{StaticResource TransparentButtonStyle}" Command="{Binding ShowPageCommand}" CommandParameter="FocusView"/>-->
+                    
+                    <Button Content="今日数据" Style="{StaticResource TransparentButtonStyle}" Command="{Binding ShowPageCommand}" CommandParameter="DailyReportView"/>
+                    <Button Content="占比分析" Style="{StaticResource TransparentButtonStyle}" Command="{Binding ShowPageCommand}" CommandParameter="PieChartView"/>
+                    <Button Content="趋势展示" Style="{StaticResource TransparentButtonStyle}" Command="{Binding ShowPageCommand}" CommandParameter="LineChartView"/>
+                    <Button Content="键盘数据" Style="{StaticResource TransparentButtonStyle}" Command="{Binding ShowPageCommand}" CommandParameter="KeyboradView"/>
+                    <Button Content="复制数据" Style="{StaticResource TransparentButtonStyle}" Command="{Binding ShowPageCommand}" CommandParameter="CopyboardView"/>
+                    <Button Content="窗口数据" Style="{StaticResource TransparentButtonStyle}" Command="{Binding ShowPageCommand}" CommandParameter="WindowsView"/>
+                    <Button Content="系统设置" Style="{StaticResource TransparentButtonStyle}" Command="{Binding ShowPageCommand}" CommandParameter="SettingsView"/>
+                </StackPanel>
 
-                <!-- 右边 Logo 和标题 -->
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Grid.Column="1" HorizontalAlignment="Right">
-                    <Border Width="30" Height="30" CornerRadius="5" Background="#80D0F0" VerticalAlignment="Center"/>
-                    <!-- 保持应用标题一致性 -->
-                    <TextBlock Text="Discipline Engine" Margin="10,0,0,0" Foreground="White" FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Grid.Column="2" HorizontalAlignment="Right">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
+                        <Button Content="—" Click="MinimizeButton_Click" Style="{StaticResource WindowControlButton}"/>
+                        <Button Content="X" Click="CloseButton_Click" Style="{StaticResource CloseButton}"/>
+                    </StackPanel>
                 </StackPanel>
             </Grid>
         </Grid>
 
-        <!-- ============================== 中部 Content ============================== -->
-        <!-- 关键修改：移除 x:Name 并绑定 Content="{Binding CurrentPage}" -->
-        <Frame Content="{Binding CurrentPage}" Grid.Row="1" Margin="10" Background="#F5F5F5" NavigationUIVisibility="Hidden"/>
-
+        <Frame Content="{Binding CurrentPage}" Grid.Row="1" Margin="0" NavigationUIVisibility="Hidden" Background="Transparent"/>
     </Grid>
 </Window>
