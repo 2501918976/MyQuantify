@@ -1,0 +1,185 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\admin\\source\\repos\\SelfTracker\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{1A0A4527-3CF2-33BC-E6F5-002249E597B8}|SelfTracker\\SelfTracker.csproj|c:\\users\\admin\\source\\repos\\selftracker\\selftracker\\views\\todaydashboardview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{1A0A4527-3CF2-33BC-E6F5-002249E597B8}|SelfTracker\\SelfTracker.csproj|solutionrelative:selftracker\\views\\todaydashboardview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1A0A4527-3CF2-33BC-E6F5-002249E597B8}|SelfTracker\\SelfTracker.csproj|c:\\users\\admin\\source\\repos\\selftracker\\selftracker\\views\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{1A0A4527-3CF2-33BC-E6F5-002249E597B8}|SelfTracker\\SelfTracker.csproj|solutionrelative:selftracker\\views\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1A0A4527-3CF2-33BC-E6F5-002249E597B8}|SelfTracker\\SelfTracker.csproj|c:\\users\\admin\\source\\repos\\selftracker\\selftracker\\views\\historydatacontrol.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{1A0A4527-3CF2-33BC-E6F5-002249E597B8}|SelfTracker\\SelfTracker.csproj|solutionrelative:selftracker\\views\\historydatacontrol.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1A0A4527-3CF2-33BC-E6F5-002249E597B8}|SelfTracker\\SelfTracker.csproj|c:\\users\\admin\\source\\repos\\selftracker\\selftracker\\views\\categoryview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{1A0A4527-3CF2-33BC-E6F5-002249E597B8}|SelfTracker\\SelfTracker.csproj|solutionrelative:selftracker\\views\\categoryview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1A0A4527-3CF2-33BC-E6F5-002249E597B8}|SelfTracker\\SelfTracker.csproj|c:\\users\\admin\\source\\repos\\selftracker\\selftracker\\views\\settingsview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{1A0A4527-3CF2-33BC-E6F5-002249E597B8}|SelfTracker\\SelfTracker.csproj|solutionrelative:selftracker\\views\\settingsview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1A0A4527-3CF2-33BC-E6F5-002249E597B8}|SelfTracker\\SelfTracker.csproj|c:\\users\\admin\\source\\repos\\selftracker\\selftracker\\views\\settingsview.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1A0A4527-3CF2-33BC-E6F5-002249E597B8}|SelfTracker\\SelfTracker.csproj|solutionrelative:selftracker\\views\\settingsview.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1A0A4527-3CF2-33BC-E6F5-002249E597B8}|SelfTracker\\SelfTracker.csproj|c:\\users\\admin\\source\\repos\\selftracker\\selftracker\\setting\\appsettings.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1A0A4527-3CF2-33BC-E6F5-002249E597B8}|SelfTracker\\SelfTracker.csproj|solutionrelative:selftracker\\setting\\appsettings.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1A0A4527-3CF2-33BC-E6F5-002249E597B8}|SelfTracker\\SelfTracker.csproj|c:\\users\\admin\\source\\repos\\selftracker\\selftracker\\app.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{1A0A4527-3CF2-33BC-E6F5-002249E597B8}|SelfTracker\\SelfTracker.csproj|solutionrelative:selftracker\\app.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1A0A4527-3CF2-33BC-E6F5-002249E597B8}|SelfTracker\\SelfTracker.csproj|c:\\users\\admin\\source\\repos\\selftracker\\selftracker\\views\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1A0A4527-3CF2-33BC-E6F5-002249E597B8}|SelfTracker\\SelfTracker.csproj|solutionrelative:selftracker\\views\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 1,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedHeight": 316,
+          "SelectedChildIndex": 2,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{dcc4ea97-1c0c-482b-b205-e541c0df9728}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "TodayDashboardView.xaml",
+              "DocumentMoniker": "C:\\Users\\admin\\source\\repos\\SelfTracker\\SelfTracker\\Views\\TodayDashboardView.xaml",
+              "RelativeDocumentMoniker": "SelfTracker\\Views\\TodayDashboardView.xaml",
+              "ToolTip": "C:\\Users\\admin\\source\\repos\\SelfTracker\\SelfTracker\\Views\\TodayDashboardView.xaml",
+              "RelativeToolTip": "SelfTracker\\Views\\TodayDashboardView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-01-04T11:52:10.308Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "MainWindow.xaml",
+              "DocumentMoniker": "C:\\Users\\admin\\source\\repos\\SelfTracker\\SelfTracker\\Views\\MainWindow.xaml",
+              "RelativeDocumentMoniker": "SelfTracker\\Views\\MainWindow.xaml",
+              "ToolTip": "C:\\Users\\admin\\source\\repos\\SelfTracker\\SelfTracker\\Views\\MainWindow.xaml*",
+              "RelativeToolTip": "SelfTracker\\Views\\MainWindow.xaml*",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-01-04T11:50:41.681Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "SettingsView.xaml",
+              "DocumentMoniker": "C:\\Users\\admin\\source\\repos\\SelfTracker\\SelfTracker\\Views\\SettingsView.xaml",
+              "RelativeDocumentMoniker": "SelfTracker\\Views\\SettingsView.xaml",
+              "ToolTip": "C:\\Users\\admin\\source\\repos\\SelfTracker\\SelfTracker\\Views\\SettingsView.xaml",
+              "RelativeToolTip": "SelfTracker\\Views\\SettingsView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-01-04T09:37:51.53Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "SettingsView.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\admin\\source\\repos\\SelfTracker\\SelfTracker\\Views\\SettingsView.xaml.cs",
+              "RelativeDocumentMoniker": "SelfTracker\\Views\\SettingsView.xaml.cs",
+              "ToolTip": "C:\\Users\\admin\\source\\repos\\SelfTracker\\SelfTracker\\Views\\SettingsView.xaml.cs",
+              "RelativeToolTip": "SelfTracker\\Views\\SettingsView.xaml.cs",
+              "ViewState": "AgIAAFQBAAAAAAAAAAAowGgBAABtAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-04T07:14:53.831Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "App.xaml",
+              "DocumentMoniker": "C:\\Users\\admin\\source\\repos\\SelfTracker\\SelfTracker\\App.xaml",
+              "RelativeDocumentMoniker": "SelfTracker\\App.xaml",
+              "ToolTip": "C:\\Users\\admin\\source\\repos\\SelfTracker\\SelfTracker\\App.xaml",
+              "RelativeToolTip": "SelfTracker\\App.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-01-04T11:38:58.289Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "HistoryDataControl.xaml",
+              "DocumentMoniker": "C:\\Users\\admin\\source\\repos\\SelfTracker\\SelfTracker\\Views\\HistoryDataControl.xaml",
+              "RelativeDocumentMoniker": "SelfTracker\\Views\\HistoryDataControl.xaml",
+              "ToolTip": "C:\\Users\\admin\\source\\repos\\SelfTracker\\SelfTracker\\Views\\HistoryDataControl.xaml",
+              "RelativeToolTip": "SelfTracker\\Views\\HistoryDataControl.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-01-04T09:47:11.382Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "MainWindow.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\admin\\source\\repos\\SelfTracker\\SelfTracker\\Views\\MainWindow.xaml.cs",
+              "RelativeDocumentMoniker": "SelfTracker\\Views\\MainWindow.xaml.cs",
+              "ToolTip": "C:\\Users\\admin\\source\\repos\\SelfTracker\\SelfTracker\\Views\\MainWindow.xaml.cs",
+              "RelativeToolTip": "SelfTracker\\Views\\MainWindow.xaml.cs",
+              "ViewState": "AgIAAB4AAAAAAAAAAAAuwCwAAAAaAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-04T09:44:11.888Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "CategoryView.xaml",
+              "DocumentMoniker": "C:\\Users\\admin\\source\\repos\\SelfTracker\\SelfTracker\\Views\\CategoryView.xaml",
+              "RelativeDocumentMoniker": "SelfTracker\\Views\\CategoryView.xaml",
+              "ToolTip": "C:\\Users\\admin\\source\\repos\\SelfTracker\\SelfTracker\\Views\\CategoryView.xaml",
+              "RelativeToolTip": "SelfTracker\\Views\\CategoryView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-01-04T09:53:02.531Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "AppSettings.cs",
+              "DocumentMoniker": "C:\\Users\\admin\\source\\repos\\SelfTracker\\SelfTracker\\Setting\\AppSettings.cs",
+              "RelativeDocumentMoniker": "SelfTracker\\Setting\\AppSettings.cs",
+              "ToolTip": "C:\\Users\\admin\\source\\repos\\SelfTracker\\SelfTracker\\Setting\\AppSettings.cs",
+              "RelativeToolTip": "SelfTracker\\Setting\\AppSettings.cs",
+              "ViewState": "AgIAABMAAAAAAAAAAAAQwB8AAAAOAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-02T09:54:27.396Z",
+              "EditorCaption": ""
+            }
+          ]
+        },
+        {
+          "DockedHeight": 191,
+          "SelectedChildIndex": -1,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{34e76e81-ee4a-11d0-ae2e-00a0c90fffc3}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

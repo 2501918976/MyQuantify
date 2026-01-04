@@ -1,0 +1,10 @@
+{
+  "LogIntervalSeconds": 120,
+  "AFKTimeoutSeconds": 180,
+  "ThemeColor": "#4CAF50",
+  "TextColor": "#7F8C8D",
+  "BackgroundOpacity": 0.8500000000000001,
+  "BackgroundMode": "None",
+  "CustomBackgroundPath": null,
+  "AutoStart": true
+}
