@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>历史数据分析</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'Segoe UI', Tahoma, sans-serif;
+            background: transparent;
+            padding: 16px;
+            color: #2c3e50;
+        }
+
+        .container {
+            max-width: 100%;
+        }
+
+        /* 头部：标题和日期选择在同一行 */
+        .header {
+            background: white;
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            color: #2c3e50;
+            margin: 0;
+        }
+
+        .date-selector {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .date-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .date-group label {
+            font-size: 13px;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .date-group input[type="date"] {
+            padding: 6px 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 13px;
+            transition: border-color 0.3s;
+        }
+
+        .date-group input[type="date"]:focus {
+            outline: none;
+            border-color: #4e73df;
+        }
+
+        .btn-query {
+            padding: 6px 24px;
+            background: #4e73df;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .btn-query:hover {
+            background: #3c5fd1;
+        }
+
+        /* 数据卡片：4个一行，紧凑显示 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        /* 修改卡片网格间距 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px; /* 间距稍微缩小 */
+            margin-bottom: 12px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 8px;
+            padding: 10px 14px; /* 大幅缩小上下内边距 */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 70px; /* 固定一个较小的高度 */
+        }
+
+        .stat-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 2px; /* 紧贴数值线 */
+        }
+
+        .stat-icon {
+            font-size: 14px; /* 图标稍微缩小 */
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #7f8c8d;
+            font-weight: 500;
+        }
+
+        /* 数值和趋势所在行 */
+        .stat-value-container {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+        }
+
+        .stat-value {
+            font-size: 20px; /* 稍微减小字号以适应高度 */
+            font-weight: 700;
+            color: #2c3e50;
+        }
+
+        .stat-trend {
+            font-size: 10px;
+            font-weight: 600;
+            padding: 1px 5px; /* 极其紧凑的标签 */
+            border-radius: 3px;
+            line-height: 1.4;
+        }
+
+        /* 修改卡片内容布局 */
+        .stat-value-container {
+            display: flex;
+            align-items: baseline; /* 底部对齐 */
+            gap: 8px; /* 数值和趋势之间的间距 */
+        }
+
+        .stat-trend.up {
+            background: #e8f5e9;
+            color: #4caf50;
+        }
+
+        .stat-trend.down {
+            background: #ffebee;
+            color: #f44336;
+        }
+
+        .stat-trend.neutral {
+            background: #f5f5f5;
+            color: #9e9e9e;
+        }
+
+        /* 图表容器 */
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .chart-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .chart-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .controls-group {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 4px;
+            background: #f5f5f5;
+            padding: 4px;
+            border-radius: 6px;
+        }
+
+        .btn-toggle {
+            padding: 6px 14px;
+            background: transparent;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-toggle.active {
+            background: white;
+            color: #4e73df;
+            font-weight: 600;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-toggle:hover:not(.active) {
+            color: #333;
+        }
+
+        #mainChart {
+            width: 100%;
+            height: 300px;
+        }
+
+        .label-text {
+            font-size: 12px;
+            color: #666;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部：标题和日期选择在同一行 -->
+        <div class="header">
+            <h1>📊 历史数据分析</h1>
+            <div class="date-selector">
+                <div class="date-group">
+                    <label for="startDate">起始：</label>
+                    <input type="date" id="startDate">
+                </div>
+                <div class="date-group">
+                    <label for="endDate">结束：</label>
+                    <input type="date" id="endDate">
+                </div>
+                <button class="btn-query" onclick="loadData()">查询</button>
+            </div>
+        </div>
+
+        <!-- 数据汇总卡片：4个一行 -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-header">
+                    <span class="stat-icon">⌨️</span>
+                    <span class="stat-label">打字数</span>
+                </div>
+                <div class="stat-value-container">
+                    <div class="stat-value" id="totalKeystrokes">0</div>
+                    <span class="stat-trend up" id="keystrokesTrend">+0%</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-header">
+                    <span class="stat-icon">📋</span>
+                    <span class="stat-label">复制次数</span>
+                </div>
+                <div class="stat-value-container">
+                    <div class="stat-value" id="totalCopies">0</div>
+                    <span class="stat-trend up" id="copiesTrend">+0%</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-header">
+                    <span class="stat-icon">⏰</span>
+                    <span class="stat-label">工作时间</span>
+                </div>
+                <div class="stat-value-container">
+                    <div class="stat-value" id="totalActiveTime">0h</div>
+                    <span class="stat-trend up" id="activeTrend">+0%</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-header">
+                    <span class="stat-icon">💤</span>
+                    <span class="stat-label">离开时间</span>
+                </div>
+                <div class="stat-value-container">
+                    <div class="stat-value" id="totalAfkTime">0h</div>
+                    <span class="stat-trend down" id="afkTrend">-0%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 图表区域：可切换数据类型和图表类型 -->
+        <div class="chart-container">
+            <div class="chart-controls">
+                <div class="chart-title" id="chartTitle">打字数量变化趋势</div>
+                <div class="controls-group">
+                    <!-- 数据类型切换 -->
+                    <span class="label-text">数据类型：</span>
+                    <div class="btn-group">
+                        <button class="btn-toggle active" onclick="switchDataType('keystrokes')">打字</button>
+                        <button class="btn-toggle" onclick="switchDataType('copies')">复制</button>
+                        <button class="btn-toggle" onclick="switchDataType('active')">工作</button>
+                        <button class="btn-toggle" onclick="switchDataType('afk')">离开</button>
+                    </div>
+
+                    <!-- 图表类型切换 -->
+                    <span class="label-text" style="margin-left: 12px;">图表类型：</span>
+                    <div class="btn-group">
+                        <button class="btn-toggle active" onclick="switchChartType('line')">折线图</button>
+                        <button class="btn-toggle" onclick="switchChartType('bar')">柱状图</button>
+                    </div>
+                </div>
+            </div>
+            <div id="mainChart"></div>
+        </div>
+    </div>
+
+    <script>
+        // 初始化图表
+        const mainChart = echarts.init(document.getElementById('mainChart'));
+
+        // 当前状态
+        let currentDataType = 'keystrokes';
+        let currentChartType = 'line';
+        let chartData = {
+            dates: [],
+            keystrokes: [],
+            copies: [],
+            active: [],
+            afk: []
+        };
+
+        // 数据类型配置
+        const dataTypeConfig = {
+            keystrokes: {
+                title: '打字数量变化趋势',
+                color: '#FF9800',
+                name: '打字数量',
+                unit: ''
+            },
+            copies: {
+                title: '复制次数变化趋势',
+                color: '#4CAF50',
+                name: '复制次数',
+                unit: ''
+            },
+            active: {
+                title: '工作时间变化趋势',
+                color: '#2196F3',
+                name: '工作时间',
+                unit: '小时'
+            },
+            afk: {
+                title: '离开时间变化趋势',
+                color: '#E91E63',
+                name: '离开时间',
+                unit: '小时'
+            }
+        };
+
+        // 设置默认日期范围
+        function setDefaultDates() {
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            const fifteenDaysAgo = new Date(today);
+            fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
+
+            document.getElementById('endDate').valueAsDate = yesterday;
+            document.getElementById('startDate').valueAsDate = fifteenDaysAgo;
+        }
+
+        // 格式化日期
+        function formatDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // 更新趋势显示
+        function updateTrend(elementId, trendValue) {
+            const element = document.getElementById(elementId);
+            const absValue = Math.abs(trendValue);
+            const sign = trendValue > 0 ? '+' : '';
+
+            element.textContent = `${sign}${trendValue.toFixed(1)}%`;
+
+            if (trendValue > 5) {
+                element.className = 'stat-trend up';
+            } else if (trendValue < -5) {
+                element.className = 'stat-trend down';
+            } else {
+                element.className = 'stat-trend neutral';
+            }
+        }
+
+        // 从 C# 接收数据和趋势
+        function updateCharts(dataJson, trendsJson) {
+            const data = JSON.parse(dataJson);
+            const trends = JSON.parse(trendsJson);
+
+            // 提取数据
+            chartData.dates = data.map(d => d.Date);
+            chartData.keystrokes = data.map(d => d.Keystrokes);
+            chartData.copies = data.map(d => d.CopyCount);
+            chartData.active = data.map(d => d.ActiveTimeHours);
+            chartData.afk = data.map(d => d.AfkTimeHours);
+
+            // 更新汇总数据
+            const totalKeystrokes = chartData.keystrokes.reduce((a, b) => a + b, 0);
+            const totalCopies = chartData.copies.reduce((a, b) => a + b, 0);
+            const totalActive = chartData.active.reduce((a, b) => a + b, 0);
+            const totalAfk = chartData.afk.reduce((a, b) => a + b, 0);
+
+            document.getElementById('totalKeystrokes').textContent = totalKeystrokes.toLocaleString();
+            document.getElementById('totalCopies').textContent = totalCopies.toLocaleString();
+            document.getElementById('totalActiveTime').textContent = totalActive.toFixed(1) + 'h';
+            document.getElementById('totalAfkTime').textContent = totalAfk.toFixed(1) + 'h';
+
+            // 更新趋势
+            updateTrend('keystrokesTrend', trends.KeystrokesTrend || 0);
+            updateTrend('copiesTrend', trends.CopiesTrend || 0);
+            updateTrend('activeTrend', trends.ActiveTrend || 0);
+            updateTrend('afkTrend', trends.AfkTrend || 0);
+
+            // 更新图表
+            renderChart();
+        }
+
+        // 渲染图表
+        function renderChart() {
+            const config = dataTypeConfig[currentDataType];
+            const data = chartData[currentDataType];
+
+            const option = {
+                tooltip: {
+                    trigger: 'axis',
+                    formatter: function(params) {
+                        const value = params[0].value;
+                        const unit = config.unit;
+                        return `${params[0].axisValue}<br/>${config.name}: ${value}${unit}`;
+                    }
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: chartData.dates,
+                    axisLabel: {
+                        rotate: 0,
+                        fontSize: 11
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    name: config.name + (config.unit ? `(${config.unit})` : ''),
+                    nameTextStyle: {
+                        fontSize: 12
+                    }
+                },
+                series: [
+                    {
+                        name: config.name,
+                        type: currentChartType,
+                        data: data,
+                        smooth: currentChartType === 'line',
+                        itemStyle: { color: config.color },
+                        areaStyle: currentChartType === 'line' ? {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: config.color + '4D' },
+                                { offset: 1, color: config.color + '0D' }
+                            ])
+                        } : undefined
+                    }
+                ]
+            };
+
+            mainChart.setOption(option, true);
+        }
+
+        // 切换数据类型
+        function switchDataType(type) {
+            currentDataType = type;
+
+            // 更新按钮状态
+            document.querySelectorAll('.controls-group .btn-group')[0].querySelectorAll('.btn-toggle').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // 更新标题
+            document.getElementById('chartTitle').textContent = dataTypeConfig[type].title;
+
+            // 重新渲染图表
+            renderChart();
+        }
+
+        // 切换图表类型
+        function switchChartType(type) {
+            currentChartType = type;
+
+            // 更新按钮状态
+            document.querySelectorAll('.controls-group .btn-group')[1].querySelectorAll('.btn-toggle').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // 重新渲染图表
+            renderChart();
+        }
+
+        // 加载数据
+        function loadData() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            if (!startDate || !endDate) {
+                alert('请选择完整的日期范围');
+                return;
+            }
+
+            if (startDate > endDate) {
+                alert('起始日期不能晚于结束日期');
+                return;
+            }
+
+            // 调用 C# 方法加载数据
+            if (window.external && window.external.LoadHistoryData) {
+                window.external.LoadHistoryData(startDate, endDate);
+            }
+        }
+
+        // 窗口大小改变时重绘图表
+        window.addEventListener('resize', () => {
+            mainChart.resize();
+        });
+
+        // 页面加载时设置默认日期并加载演示数据
+        window.onload = function() {
+            setDefaultDates();
+            loadDemoData();
+        };
+
+        // 演示数据
+        function loadDemoData() {
+            const demoData = [];
+            const today = new Date();
+
+            for (let i = 15; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+
+                demoData.push({
+                    Date: formatDate(date),
+                    Keystrokes: Math.floor(Math.random() * 3000) + 1500,
+                    CopyCount: Math.floor(Math.random() * 150) + 40,
+                    AfkTimeHours: parseFloat((Math.random() * 2.5 + 0.5).toFixed(1)),
+                    ActiveTimeHours: parseFloat((Math.random() * 5 + 2).toFixed(1))
+                });
+            }
+
+            const demoTrends = {
+                KeystrokesTrend: (Math.random() * 30 - 10).toFixed(1),
+                CopiesTrend: (Math.random() * 25 - 8).toFixed(1),
+                ActiveTrend: (Math.random() * 20 - 5).toFixed(1),
+                AfkTrend: (Math.random() * 15 - 10).toFixed(1)
+            };
+
+            updateCharts(JSON.stringify(demoData), JSON.stringify(demoTrends));
+        }
+    </script>
+</body>
+</html>
