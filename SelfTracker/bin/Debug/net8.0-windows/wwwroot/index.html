@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SelfTracker - 个人时间追踪</title>
+    <link rel="stylesheet" href="glass.tokens.css">
+    <link rel="stylesheet" href="glass.roles.css">
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            width: 1000px;
+            height: 600px;
+            overflow: hidden;
+            display: flex;
+            background-image: url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1000&q=80');
+            background-size: cover;
+            flex-direction: column;
+            background-color: #f8f9fc;
+            font-family: 'Segoe UI', "Microsoft YaHei", sans-serif;
+        }
+
+
+        /* overlay.roles.css 或者直接写在当前页面 */
+        .overlay-transparent {
+            background: transparent;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+        }
+
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            width: 1000px;
+            height: 600px;
+        }
+
+        .top-nav {
+            height: 60px;
+            flex-shrink: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 100;
+            -webkit-app-region: drag;
+        }
+
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            user-select: none;
+        }
+
+        .logo-icon {
+            font-size: 24px;
+        }
+
+        .app-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        /* 导航与控制按钮区 */
+        .nav-buttons {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            -webkit-app-region: no-drag; 
+        }
+
+        .page-switch-group {
+            display: flex;
+            gap: 4px;
+        }
+
+        /* 按钮样式微调 - 应用毛玻璃效果 */
+        .nav-btn {
+            padding: 8px 16px;
+            font-size: 13px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+        }
+
+            .nav-btn:hover {
+                background: rgba(78, 115, 223, 0.08);
+                color: var(--primary-color);
+            }
+
+            .nav-btn.active {
+                background: var(--primary-color);
+                color: white;
+                font-weight: 600;
+                box-shadow: 0 2px 8px rgba(78, 115, 223, 0.3);
+            }
+
+        .window-controls {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 10px;
+            padding-left: 15px;
+            border-left: 1px solid rgba(0,0,0,0.1);
+        }
+
+        /* 窗口控制按钮 - 增强毛玻璃效果 */
+        .win-btn {
+            background: transparent;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-main);
+            transition: all 0.2s ease;
+        }
+
+            .win-btn:hover {
+                background: rgba(0, 0, 0, 0.08);
+                transform: scale(1.05);
+            }
+
+        .close-btn:hover {
+            background: #e74a3b !important;
+            color: white !important;
+            box-shadow: 0 2px 8px rgba(231, 74, 59, 0.3);
+        }
+
+        /* iframe 容器：高度 = 600 - 60 = 540px */
+        .iframe-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: transparent;
+        }
+
+
+        .page-frame {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: none;
+        }
+
+            .page-frame.active {
+                display: block;
+            }
+
+        /* 加载动画 */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            z-index: 50;
+        }
+
+            .loading.show {
+                display: block;
+            }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <header class="top-nav overlay-transparent">
+            <div class="logo-section">
+                <span class="logo-icon">📊</span>
+                <span class="app-title">SelfTracker</span>
+            </div>
+            <div class="nav-buttons">
+                <div class="page-switch-group">
+                    <button class="nav-btn active" data-page="today" onclick="switchPage('today')">今日统计</button>
+                    <button class="nav-btn" data-page="history" onclick="switchPage('history')">历史数据</button>
+                    <button class="nav-btn" data-page="category" onclick="switchPage('category')">分类管理</button>
+                    <button class="nav-btn" data-page="settings" onclick="switchPage('settings')">系统设置</button>
+                </div>
+
+                <div class="window-controls">
+                    <button class="win-btn min-btn" onclick="minimizeWindow()" title="最小化">—</button>
+                    <button class="win-btn close-btn" onclick="closeWindow()" title="关闭">✕</button>
+                </div>
+            </div>
+        </header>
+
+        <main class="iframe-container">
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+            </div>
+            <iframe id="todayFrame" class="page-frame active" src="today.html"></iframe>
+            <iframe id="historyFrame" class="page-frame" src="history_data.html"></iframe>
+            <iframe id="categoryFrame" class="page-frame" src="category-board.html"></iframe>
+            <iframe id="settingsFrame" class="page-frame" src="settings.html"></iframe>
+        </main>
+    </div>
+
+    <script src="bridge.js"></script>
+    <script>
+
+        function switchPage(page) {
+            // 更新按钮状态
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.querySelector(`[data-page="${page}"]`);
+            if (activeBtn) activeBtn.classList.add('active');
+
+            // 更新 iframe 显示
+            document.querySelectorAll('.page-frame').forEach(frame => frame.classList.remove('active'));
+            const activeFrame = document.getElementById(page + 'Frame');
+            if (activeFrame) activeFrame.classList.add('active');
+        }
+
+
+        function minimizeWindow() {
+            // 调用 bridge.js 中封装好的方法
+            AppBridge.minimize();
+        }
+
+        function closeWindow() {
+            // 调用 bridge.js 中封装好的方法
+            AppBridge.close();
+        }
+
+        // 4. 【核心修复】将函数挂载到 window，使 HTML 的 onclick 能够访问
+        window.switchPage = switchPage;
+        window.minimizeWindow = minimizeWindow;
+        window.closeWindow = closeWindow;
+
+        window.addEventListener('message', function (event) {
+            if (event.data.type === 'themeChange') {
+                applyTheme(event.data.theme);
+                document.querySelectorAll('.page-frame').forEach(frame => {
+                    frame.contentWindow.postMessage({
+                        type: 'applyTheme',
+                        theme: event.data.theme
+                    }, '*');
+                });
+            } else if (event.data.type === 'switchPage') {
+                switchPage(event.data.page);
+            }
+        });
+
+        function applyTheme(theme) {
+            const root = document.documentElement;
+            const themes = {
+                blue: { primary: '#4e73df' },
+                red: { primary: '#e74a3b' },
+                cyan: { primary: '#36b9cc' },
+                green: { primary: '#1cc88a' },
+                orange: { primary: '#f6c23e' },
+                purple: { primary: '#6f42c1' }
+            };
+            if (themes[theme]) {
+                root.style.setProperty('--primary-color', themes[theme].primary);
+                localStorage.setItem('selectedTheme', theme);
+            }
+        }
+
+        window.addEventListener('load', () => {
+            const savedTheme = localStorage.getItem('selectedTheme') || 'blue';
+            applyTheme(savedTheme);
+        });
+    </script>
+</body>
+</html>

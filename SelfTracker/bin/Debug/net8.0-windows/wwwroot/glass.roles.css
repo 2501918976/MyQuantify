@@ -1,0 +1,49 @@
+.glass {
+    backdrop-filter: blur(var(--glass-blur-normal));
+    -webkit-backdrop-filter: blur(var(--glass-blur-normal));
+}
+
+.glass-superstrong {
+    background: var(--glass-bg-superstrong);
+    backdrop-filter: blur(var(--glass-blur-superstrong));
+    -webkit-backdrop-filter: blur(var(--glass-blur-superstrong));
+    box-shadow: var(--glass-shadow-md);
+}
+
+.glass-strong {
+    background: var(--glass-bg-strong);
+    backdrop-filter: blur(var(--glass-blur-strong));
+    -webkit-backdrop-filter: blur(var(--glass-blur-strong));
+    box-shadow: var(--glass-shadow-md);
+}
+
+.glass-normal {
+    background: var(--glass-bg-normal);
+    backdrop-filter: blur(var(--glass-blur-normal));
+    -webkit-backdrop-filter: blur(var(--glass-blur-normal));
+    box-shadow: var(--glass-shadow-sm);
+}
+
+.glass-weak {
+    background: var(--glass-bg-weak);
+    backdrop-filter: blur(var(--glass-blur-weak));
+    -webkit-backdrop-filter: blur(var(--glass-blur-weak));
+}
+
+.glass-superweak {
+    background: var(--glass-bg-superweak);
+    backdrop-filter: blur(var(--glass-blur-superweak));
+    -webkit-backdrop-filter: blur(var(--glass-blur-superweak));
+}
+
+.glass-0 {
+    background: var(--glass-bg-0);
+    backdrop-filter: blur(var(--glass-blur-0));
+    -webkit-backdrop-filter: blur(var(--glass-blur-0));
+}
+
+/* 可选修饰 */
+.glass-bordered {
+    border: 1px solid var(--glass-border);
+}
+

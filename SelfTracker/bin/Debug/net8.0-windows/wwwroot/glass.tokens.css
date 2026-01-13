@@ -1,0 +1,23 @@
+:root {
+    /* 白度（重新拉开层级） */
+    --glass-bg-superstrong: rgba(255, 255, 255, 0.52);
+    --glass-bg-strong: rgba(255, 255, 255, 0.32);
+    --glass-bg-normal: rgba(255, 255, 255, 0.22);
+    --glass-bg-weak:   rgba(255, 255, 255, 0.14);
+    --glass-bg-superweak: rgba(255, 255, 255, 0.72);
+    --glass-bg-superstrong: rgba(255, 255, 255, 0.72);
+
+    /* 模糊（与白度反向配合） */
+    --glass-blur-superstrong: 12px;
+    --glass-blur-strong: 18px;
+    --glass-blur-normal: 22px;
+    --glass-blur-weak:   28px;
+    --glass-blur-superweak: 12px;
+    --glass-blur-0: 12px;
+
+    /* 边框 / 阴影（统一偏弱） */
+    --glass-border: rgba(255, 255, 255, 0.28);
+
+    --glass-shadow-md: 0 10px 28px rgba(0,0,0,0.14);
+    --glass-shadow-sm: 0 6px 16px rgba(0,0,0,0.10);
+}

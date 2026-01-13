@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>今日统计</title>
+    <link rel="stylesheet" href="glass.tokens.css">
+    <link rel="stylesheet" href="glass.roles.css">
+    <style>
+
+        body {
+            width: 1000px;
+            height: 530px;
+            margin: 0;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            overflow: hidden;
+            background-position: center;
+            filter: saturate(0.9) contrast(1.05);
+            background-repeat: no-repeat;
+        }
+
+        .content-card {
+            padding: 20px;
+            border-radius: 18px;
+            display: flex;
+            flex-direction: column;
+        }
+
+
+        .page-container {
+            padding: 24px;
+            height: 100%;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* --- 顶部指标 --- */
+        .top-stats-row {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 16px;
+        }
+
+        .stat-mini-card {
+            padding: 16px;
+            border-radius: 16px;
+        }
+
+
+        .stat-mini-card.score-highlight * {
+            color: rgb(14, 1, 1) !important;
+            }
+
+        .stat-label {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .stat-value {
+            font-size: 30px;
+            font-weight: 800;
+        }
+
+        .stat-sub {
+            font-size: 12px;
+            opacity: 0.75;
+            margin-top: 6px;
+        }
+
+        /* --- 主内容 --- */
+        .main-content-area {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 16px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .card-header {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+
+        /* 修改原有的 time-blocks */
+        .time-blocks {
+            display: grid;
+            /* 强制 24 等分，每份 1fr */
+            grid-template-columns: repeat(24, 1fr); 
+            gap: 2px; /* 缩小间隙让它更像一个连续的时间轴 */
+        }
+
+        /* 统一轴的容器，使其宽度与 time-blocks 完全一致 */
+        .time-axis {
+            margin-top: 8px;
+            padding: 4px 0; /* 取消左右 padding，防止偏移 */
+            display: grid;
+            /* 关键：同样使用 24 列，但文字只占据每 2 列的宽度 */
+            grid-template-columns: repeat(24, 1fr); 
+            background: none; /* 去掉背景色，让它更干净 */
+            backdrop-filter: none;
+            box-shadow: none;
+        }
+
+        .time-axis span {
+            grid-column: span 2; /* 每个数字跨越两格 (即 2 小时) */
+            text-align: center;
+            font-size: 10px;
+            color: rgba(0, 0, 0, 0.4);
+        }
+
+        /* --- 热力图 --- */
+        .activity-map-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+        }
+
+        .map-row {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .time-blocks {
+            display: grid;
+            grid-template-columns: repeat(24, 1fr);
+            gap: 4px;
+        }
+
+        /* 热力图块 - 增强毛玻璃效果 */
+        .block {
+            height: 32px;
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.08);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+            .block:hover {
+                background: rgba(0, 0, 0, 0.12);
+                transform: scale(1.05);
+            }
+
+        /* 热力图行标签 - 添加样式 */
+        .row-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 8px;
+            padding-left: 2px;
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            margin-top: 8px;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        /* 排名列表 - 优化间距 */
+        .category-rank-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            flex: 1;
+        }
+
+        /* 排名项 - 添加悬停效果 */
+        .rank-item {
+            padding: 8px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .rank-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            transform: translateX(4px);
+        }
+
+
+        /* 排名信息 - 优化样式 */
+        .rank-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        /* 进度条 - 优化样式 */
+        .progress-bg {
+            height: 10px;
+            background: rgba(0, 0, 0, 0.08);
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .active-process-box {
+            margin-top: auto;
+            padding-top: 16px;
+        }
+
+        /* 当前进程信息 - 增强毛玻璃效果 */
+        .process-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+
+            .process-info:hover {
+                background: rgba(255, 255, 255, 0.75);
+                box-shadow: var(--shadow-lg);
+                transform: translateY(-2px);
+            }
+
+        /* 进程图标 - 优化样式 */
+        .process-icon {
+            width: 46px;
+            height: 46px;
+            border-radius: 12px;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+    </style>
+
+</head>
+
+<body>
+    <div class="page-container">
+        <div class="top-stats-row">
+            <div class="stat-mini-card score-highlight glass-strong glass-bordered">
+                <div class="stat-label">⭐ 今日得分</div>
+                <div class="stat-value">85</div>
+                <div class="stat-sub">超越 90% 的效率用户</div>
+            </div>
+            <div class="stat-mini-card score-highlight glass-strong glass-bordered">
+                <div class="stat-label">⌨️ 累计打字</div>
+                <div class="stat-value">8,542</div>
+                <div class="stat-sub">较昨日增长 12%</div>
+            </div>
+            <div class="stat-mini-card score-highlight glass-strong glass-bordered">
+                <div class="stat-label">⏰ 活跃时长</div>
+                <div class="stat-value">4.2h</div>
+                <div class="stat-sub">当前状态：深度工作</div>
+            </div>
+            <div class="stat-mini-card score-highlight glass-strong glass-bordered">
+                <div class="stat-label">📋 剪贴板次数</div>
+                <div class="stat-value">156</div>
+                <div class="stat-sub">来源: VS Code</div>
+            </div>
+            <div class="stat-mini-card score-highlight glass-strong glass-bordered">
+                <div class="stat-label">💤 离开时长</div>
+                <div class="stat-value">0.8h</div>
+                <div class="stat-sub">今日休息非常充足</div>
+            </div>
+        </div>
+
+        <div class="main-content-area">
+            <div class="content-card glass-superstrong glass-bordered glass-map-strong">
+                <div class="card-header">
+                    <span>📊 24H 活动复合特征（高采样率）</span>
+                </div>
+                <div class="activity-map-container">
+                    <div class="map-row">
+                        <div class="row-label">应用</div>
+                        <div class="time-blocks">
+                            <div class="block b-work op-high"></div><div class="block b-work op-med"></div><div class="block"></div><div class="block b-study op-high"></div>
+                            <div class="block b-work op-high"></div><div class="block b-work op-med"></div><div class="block"></div><div class="block b-study op-high"></div>
+                            <div class="block b-work op-high"></div><div class="block b-work op-med"></div><div class="block"></div><div class="block b-study op-high"></div>
+                            <div class="block b-work op-high"></div><div class="block b-work op-med"></div><div class="block"></div><div class="block b-study op-high"></div>
+                            <div class="block b-work op-high"></div><div class="block b-work op-med"></div><div class="block"></div><div class="block b-study op-high"></div>
+                            <div class="block b-work op-high"></div><div class="block b-work op-med"></div><div class="block"></div><div class="block b-study op-high"></div>
+                        </div>
+                    </div>
+                    <div class="map-row">
+                        <div class="row-label">打字</div>
+                        <div class="time-blocks">
+                            <div class="block k-fill op-high"></div><div class="block k-fill op-low"></div><div class="block"></div><div class="block k-fill op-med"></div>
+                            <div class="block k-fill op-high"></div><div class="block k-fill op-low"></div><div class="block"></div><div class="block k-fill op-med"></div>
+                            <div class="block k-fill op-high"></div><div class="block k-fill op-low"></div><div class="block"></div><div class="block k-fill op-med"></div>
+                            <div class="block k-fill op-high"></div><div class="block k-fill op-low"></div><div class="block"></div><div class="block k-fill op-med"></div>
+                            <div class="block k-fill op-high"></div><div class="block k-fill op-low"></div><div class="block"></div><div class="block k-fill op-med"></div>
+                            <div class="block k-fill op-high"></div><div class="block k-fill op-low"></div><div class="block"></div><div class="block k-fill op-med"></div>
+                        </div>
+                    </div>
+                    <div class="map-row">
+                        <div class="row-label">复制</div>
+                        <div class="time-blocks">
+                            <div class="block c-fill op-high"></div><div class="block"></div><div class="block c-fill op-low"></div><div class="block"></div>
+                            <div class="block c-fill op-high"></div><div class="block"></div><div class="block c-fill op-low"></div><div class="block"></div>
+                            <div class="block c-fill op-high"></div><div class="block"></div><div class="block c-fill op-low"></div><div class="block"></div>
+                            <div class="block c-fill op-high"></div><div class="block"></div><div class="block c-fill op-low"></div><div class="block"></div>
+                            <div class="block c-fill op-high"></div><div class="block"></div><div class="block c-fill op-low"></div><div class="block"></div>
+                            <div class="block c-fill op-high"></div><div class="block"></div><div class="block c-fill op-low"></div><div class="block"></div>
+                        </div>
+                        <div class="time-axis">
+                            <span>00</span><span>02</span><span>04</span><span>06</span><span>08</span><span>10</span><span>12</span><span>14</span><span>16</span><span>18</span><span>20</span><span>22</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-card glass-normal glass-bordered">
+                <div class="card-header">📂 时长分布排行</div>
+                <div class="category-rank-list">
+                    <div class="rank-item">
+                        <div class="rank-info"><span>💼 办公开发</span><span>2.5h</span></div>
+                        <div class="progress-bg"><div class="progress-fill" style="width: 62%; background: #4e73df;"></div></div>
+                    </div>
+                    <div class="rank-item">
+                        <div class="rank-info"><span>📚 文档学习</span><span>1.2h</span></div>
+                        <div class="progress-bg"><div class="progress-fill" style="width: 35%; background: #1cc88a;"></div></div>
+                    </div>
+                    <div class="rank-item">
+                        <div class="rank-info"><span>🎮 休闲娱乐</span><span>0.5h</span></div>
+                        <div class="progress-bg"><div class="progress-fill" style="width: 15%; background: #f6c23e;"></div></div>
+                    </div>
+                </div>
+
+                <div class="active-process-box">
+                    <div class="process-info glass-strong glass-bordered">
+
+                        <div class="process-icon">💻</div>
+                        <div style="flex: 1;">
+                            <div style="font-size: 15px; font-weight: 800;">VS Code - App.js</div>
+                            <div style="font-size: 12px; color: #1cc88a; margin-top:2px;">开发模式 · 运行中</div>
+                        </div>
+                        <div style="font-size: 14px; font-weight: 800; color: var(--primary-color);">45m</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>应用分类看板</title>
+    <style>
+        /* --- 1. 核心布局与变量 --- */
+        body {
+            width: 1000px;
+            height: 530px;
+            overflow: hidden;
+            font-family: system-ui;
+        }
+
+        .page-container {
+            padding: 16px 20px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+
+        /* 提取公用毛玻璃效果 */
+        .glass {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+        }
+
+        /* --- 2. 看板与列 --- */
+        .board {
+            display: flex;
+            gap: 16px;
+            overflow-x: auto;
+            flex: 1;
+            padding-bottom: 16px;
+            align-items: flex-start;
+        }
+
+        .column {
+            min-width: 280px;
+            max-width: 280px;
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            max-height: 100%;
+            transition: 0.3s;
+        }
+
+            .column:hover {
+                transform: translateY(-2px);
+                box-shadow: var(--shadow-lg);
+            }
+
+        .column-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .count-badge {
+            background: rgba(78,115,223,0.1);
+            color: var(--primary-color);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        /* --- 3. 进程卡片 --- */
+        .process-list {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 50px;
+        }
+
+        .process-card {
+            background: rgba(255,255,255,0.8);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: grab;
+            transition: 0.2s;
+            font-size: 13px;
+        }
+
+            .process-card:hover {
+                border-color: var(--primary-color);
+                transform: translateY(-2px);
+                background: #fff;
+            }
+
+            .process-card.dragging {
+                opacity: 0.3;
+            }
+
+        /* --- 4. 按钮与交互 --- */
+        .add-column-btn {
+            min-width: 240px;
+            height: 58px;
+            background: rgba(255,255,255,0.4);
+            border: 2px dashed rgba(78,115,223,0.4);
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: 0.3s;
+        }
+
+            .add-column-btn:hover {
+                background: #fff;
+                border-style: solid;
+                color: var(--primary-color);
+            }
+
+        /* --- 5. 模态框 --- */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+            .modal.active {
+                display: flex;
+            }
+
+        .modal-content {
+            background: #fff;
+            padding: 24px;
+            border-radius: 16px;
+            width: 320px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px;
+            margin: 15px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <div class="board-header"><h1>📂 分类管理</h1></div>
+        <div class="board" id="board"></div>
+    </div>
+
+    <div class="modal" id="addCategoryModal">
+        <div class="modal-content">
+            <div class="modal-header">新建分类</div>
+            <input type="text" class="form-input" id="newCategoryName" placeholder="例如：工作、娱乐...">
+            <div style="display:flex; justify-content:flex-end; gap:8px;">
+                <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+                <button class="btn btn-primary" onclick="addCategory()">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let categories = [];
+        let draggedProcess = null;
+        const backend = window.chrome?.webview?.hostObjects?.external;
+
+        async function loadData() {
+            if (backend) updateBoard(await backend.GetBoardDataJson());
+        }
+
+        function updateBoard(json) {
+            categories = JSON.parse(json);
+            const board = document.getElementById('board');
+            board.innerHTML = categories.map(cat => `
+                    <div class="column glass">
+                        <div class="column-header">
+                            <span class="column-title">${cat.name}</span>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span class="count-badge">${cat.processes.length}</span>
+                                ${!cat.isInternal ? `<button class="btn-icon" style="border:none;background:none;cursor:pointer" onclick="removeCat(${cat.id})">🗑️</button>` : ''}
+                            </div>
+                        </div>
+                        <div class="process-list" ondragover="event.preventDefault()" ondrop="drop(event, ${cat.id})">
+                            ${cat.processes.map(p => `
+                                <div class="process-card" draggable="true" ondragstart="drag(event, '${p.name}', ${cat.id})">${p.name}</div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('') + `<button class="add-column-btn" onclick="toggleModal(true)"><span>+</span> 添加分类</button>`;
+        }
+
+        function drag(ev, name, fromId) {
+            draggedProcess = { name, fromCatId: fromId };
+            ev.target.classList.add('dragging');
+        }
+
+        async function drop(ev, toId) {
+            if (!draggedProcess || draggedProcess.fromCatId === toId) return;
+            const toCat = categories.find(c => c.id === toId);
+            if (backend && toCat) {
+                await backend.MoveProcess(draggedProcess.name, toCat.name);
+                loadData();
+            }
+        }
+
+        const toggleModal = (show) => {
+            document.getElementById('addCategoryModal').classList.toggle('active', show);
+            if (!show) document.getElementById('newCategoryName').value = '';
+        };
+
+        async function addCategory() {
+            const name = document.getElementById('newCategoryName').value.trim();
+            if (name && backend) { await backend.AddCategory(name); toggleModal(false); loadData(); }
+        }
+
+        async function removeCat(id) {
+            const cat = categories.find(c => c.id === id);
+            if (cat && confirm(`确定删除分类 "${cat.name}" 吗？`)) {
+                await backend.DeleteCategory(cat.name);
+                loadData();
+            }
+        }
+
+        // 主题处理与初始化
+        const applyTheme = (t) => {
+            const colors = { blue: '#4e73df', red: '#e74a3b', cyan: '#36b9cc', green: '#1cc88a', orange: '#f6c23e', purple: '#6f42c1' };
+            if (colors[t]) document.documentElement.style.setProperty('--primary-color', colors[t]);
+        };
+
+        window.addEventListener('message', e => e.data.type === 'applyTheme' && applyTheme(e.data.theme));
+        window.onclick = e => e.target.id === 'addCategoryModal' && toggleModal(false);
+        window.onload = () => { applyTheme(localStorage.getItem('selectedTheme') || 'blue'); loadData(); };
+    </script>
+</body>
+</html>

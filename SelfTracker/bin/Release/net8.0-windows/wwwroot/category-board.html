@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>应用分类看板</title>
+    <style>
+        /* --- 1. 动态配色变量 --- */
+        :root {
+            --primary-color: #4e73df;
+            --text-main: #2c3e50;
+            --column-bg: rgba(255, 255, 255, 0.85); /* 半透明白，适配 WPF 背景 */
+            --card-bg: #ffffff;
+            --border-color: rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* --- 2. 基础布局 --- */
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: transparent !important; /* 关键：确保背景透明 */
+            padding: 16px;
+            height: 100vh;
+            overflow: hidden;
+            color: var(--text-main);
+            transition: color 0.3s ease;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .header {
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+            .header h1 {
+                font-size: 20px;
+                color: var(--text-main);
+                font-weight: 700;
+            }
+
+        /* --- 3. 看板布局 --- */
+        .board {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            flex: 1;
+            padding-bottom: 12px;
+            align-items: flex-start;
+        }
+
+        .column {
+            min-width: 260px;
+            max-width: 260px;
+            background: var(--column-bg);
+            backdrop-filter: blur(8px); /* 毛玻璃效果 */
+            border-radius: 10px;
+            padding: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+            max-height: 100%;
+            border: 1px solid rgba(255,255,255,0.4);
+        }
+
+        .column-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .column-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .count-badge {
+            background: rgba(0,0,0,0.06);
+            color: var(--text-main);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        /* --- 4. 进程列表与卡片 --- */
+        .process-list {
+            min-height: 80px;
+            overflow-y: auto;
+            flex: 1;
+            padding-right: 4px;
+        }
+
+        .process-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 8px;
+            cursor: grab;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 13px;
+            color: var(--text-main);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+
+            .process-card:hover {
+                border-color: var(--primary-color);
+                transform: translateY(-2px);
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            }
+
+            .process-card.dragging {
+                opacity: 0.3;
+                transform: scale(0.95);
+            }
+
+        /* --- 5. 交互组件 --- */
+        .btn-icon {
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            opacity: 0.4;
+            transition: 0.2s;
+            font-size: 14px;
+        }
+
+            .btn-icon:hover {
+                opacity: 1;
+                color: #ff4d4f;
+                transform: scale(1.1);
+            }
+
+        .add-column-btn {
+            min-width: 220px;
+            height: 48px;
+            background: rgba(255,255,255,0.2);
+            border: 2px dashed rgba(0,0,0,0.15);
+            border-radius: 10px;
+            color: var(--text-main);
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+
+            .add-column-btn:hover {
+                background: var(--card-bg);
+                border-color: var(--primary-color);
+                color: var(--primary-color);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            }
+
+        /* --- 6. 模态框 (Modal) --- */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+            .modal.active {
+                display: flex;
+            }
+
+        .modal-content {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            width: 320px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            animation: modalIn 0.3s ease-out;
+        }
+
+        @keyframes modalIn {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            font-weight: 700;
+            margin-bottom: 16px;
+            font-size: 16px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            outline: none;
+        }
+
+            .form-input:focus {
+                border-color: var(--primary-color);
+            }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 18px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        /* --- 7. 滚动条美化 --- */
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📂 分类管理</h1>
+        </div>
+        <div class="board" id="board">
+        </div>
+    </div>
+
+    <div class="modal" id="addCategoryModal">
+        <div class="modal-content">
+            <div class="modal-header">新建分类</div>
+            <input type="text" class="form-input" id="newCategoryName" placeholder="例如：工作、娱乐、学习...">
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+                <button class="btn btn-primary" onclick="addCategory()">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let categories = [];
+        let draggedProcess = null;
+
+        // 获取 C# 注入的对象
+        const backend = window.chrome.webview.hostObjects.external;
+
+        // 1. 初始化/刷新数据
+        async function loadData() {
+            if (backend) {
+                try {
+                    const json = await backend.GetBoardDataJson();
+                    updateBoard(json);
+                } catch (e) {
+                    console.error("加载分类数据失败:", e);
+                }
+            }
+        }
+
+        // 2. 更新内存数据
+        function updateBoard(json) {
+            categories = JSON.parse(json);
+            render();
+        }
+
+        // 3. 渲染看板界面
+        function render() {
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+
+            categories.forEach(cat => {
+                const col = document.createElement('div');
+                col.className = 'column';
+                col.innerHTML = `
+                        <div class="column-header">
+                            <span class="column-title">${cat.name}</span>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span class="count-badge">${cat.processes.length}</span>
+                                ${!cat.isInternal ? `<button class="btn-icon" onclick="removeCat(${cat.id})">🗑️</button>` : ''}
+                            </div>
+                        </div>
+                        <div class="process-list" ondragover="allowDrop(event)" ondrop="drop(event, ${cat.id})">
+                            ${cat.processes.map(p => `
+                                <div class="process-card" draggable="true"
+                                     id="p-${p.id}"
+                                     ondragstart="drag(event, '${p.name}', ${cat.id})">
+                                    ${p.name}
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                board.appendChild(col);
+            });
+
+            // 添加分类按钮
+            const addBtn = document.createElement('button');
+            addBtn.className = 'add-column-btn';
+            addBtn.innerHTML = '<span>+</span> 添加分类';
+            addBtn.onclick = () => document.getElementById('addCategoryModal').classList.add('active');
+            board.appendChild(addBtn);
+        }
+
+        /* --- 4. 拖拽逻辑实现 --- */
+        function drag(ev, processName, fromCatId) {
+            draggedProcess = { name: processName, fromCatId: fromCatId };
+            ev.target.classList.add('dragging');
+            // 设置拖拽时显示的文字
+            ev.dataTransfer.setData("text", processName);
+        }
+
+        function allowDrop(ev) {
+            ev.preventDefault(); // 必须调用，否则无法 drop
+        }
+
+        async function drop(ev, toCatId) {
+            ev.preventDefault();
+            const cards = document.querySelectorAll('.process-card');
+            cards.forEach(c => c.classList.remove('dragging'));
+
+            if (!draggedProcess || draggedProcess.fromCatId === toCatId) return;
+
+            const toCat = categories.find(c => c.id === toCatId);
+            if (backend && toCat) {
+                try {
+                    // 调用 C# 移动逻辑
+                    await backend.MoveProcess(draggedProcess.name, toCat.name);
+                    await loadData(); // 成功后刷新
+                } catch (e) {
+                    console.error("移动进程失败:", e);
+                }
+            }
+            draggedProcess = null;
+        }
+
+        /* --- 5. 分类操作 --- */
+        async function addCategory() {
+            const nameInput = document.getElementById('newCategoryName');
+            const name = nameInput.value.trim();
+            if (name && backend) {
+                await backend.AddCategory(name);
+                closeModal();
+                await loadData();
+            }
+        }
+
+        async function removeCat(id) {
+            const cat = categories.find(c => c.id === id);
+            if (cat && confirm(`确定删除分类 "${cat.name}" 吗？\n其中的进程将自动归入"未分类"`)) {
+                if (backend) {
+                    await backend.DeleteCategory(cat.name);
+                    await loadData();
+                }
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('addCategoryModal').classList.remove('active');
+            document.getElementById('newCategoryName').value = '';
+        }
+
+        // 点击背景关闭模态框
+        window.onclick = (event) => {
+            const modal = document.getElementById('addCategoryModal');
+            if (event.target == modal) closeModal();
+        };
+
+        // 初始加载
+        window.addEventListener('DOMContentLoaded', loadData);
+    </script>
+</body>
+</html>

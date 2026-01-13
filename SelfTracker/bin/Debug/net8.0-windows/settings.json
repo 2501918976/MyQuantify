@@ -1,10 +1,11 @@
 {
-  "LogIntervalSeconds": 120,
-  "AFKTimeoutSeconds": 180,
+  "LogIntervalSeconds": 264,
+  "AFKTimeoutSeconds": 521,
   "ThemeColor": "#4CAF50",
-  "TextColor": "#7F8C8D",
-  "BackgroundOpacity": 0.8500000000000001,
-  "BackgroundMode": "None",
-  "CustomBackgroundPath": null,
+  "TextColor": "#2C3E50",
+  "SolidBackgroundColor": "#F8F9FA",
+  "BackgroundOpacity": 0.5524048096192385,
+  "BackgroundMode": "Bing",
+  "CustomBackgroundPath": "C:\\Users\\admin\\Pictures\\Screenshots\\屏幕截图 2025-11-19 182102.png",
   "AutoStart": true
 }

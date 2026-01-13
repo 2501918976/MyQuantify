@@ -10,11 +10,11 @@ none
 false
 TRACE;DEBUG;NET;NET8_0;NETCOREAPP;WINDOWS;WINDOWS7_0;NET5_0_OR_GREATER;NET6_0_OR_GREATER;NET7_0_OR_GREATER;NET8_0_OR_GREATER;NETCOREAPP3_0_OR_GREATER;NETCOREAPP3_1_OR_GREATER;WINDOWS7_0_OR_GREATER
 C:\Users\admin\source\repos\SelfTracker\SelfTracker\App.xaml
-5-291161394
-3-1066325507
-252055669594
-220-115654516
-Views\CategoryView.xaml;Views\HistoryDataControl.xaml;Views\MainWindow.xaml;Views\SettingsView.xaml;Views\TodayDashboardView.xaml;
+1-1644662438
+25-465412189
+33-1224173181
+237-859081650
+Views\MainWindow.xaml;
 
-True
+False
 

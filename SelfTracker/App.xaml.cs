@@ -9,14 +9,16 @@ namespace SelfTracker
     /// </summary>
     public partial class App : System.Windows.Application
     {
+        // App.xaml.cs
         private void Application_Startup(object sender, StartupEventArgs e)
         {
-            // 这个必须留着，否则 Hide 窗口后程序会直接退出
             System.Windows.Application.Current.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
-            MainWindow main = new MainWindow();
+            // --- 关键点：启动数据采集器 ---
+            // 这会触发 DataCollector 的构造函数，进而初始化数据库
+            SelfTracker.DataCollectors.DataCollector.Instance.Start();
 
-            // 直接显示窗口
+            MainWindow main = new MainWindow();
             main.Show();
         }
     }

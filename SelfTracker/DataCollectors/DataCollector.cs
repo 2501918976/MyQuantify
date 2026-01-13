@@ -1,284 +1,181 @@
-﻿using SelfTracker.Entity;
+﻿using SelfTracker.Controllers;
+using SelfTracker.Entity;
+using SelfTracker.Entity.Base;
 using SelfTracker.Repository;
+using SelfTracker.Repository.Base;
+using SelfTracker.Setting;
 using System;
 using System.Timers;
 
 namespace SelfTracker.DataCollectors
 {
     /// <summary>
-    /// 数据采集总控制类：负责协调各个采集组件并将数据存入数据库。
-    /// 使用 sealed 确保不可被继承。
+    /// 数据采集核心调度器（单例）
+    /// 负责协调各个控制器、管理数据库生命周期、并根据配置执行定时任务
     /// </summary>
-    public sealed class DataCollector
+    public sealed class DataCollector : IDisposable
     {
-        // ================= 单例模式 =================
-        // 使用 Lazy 确保线程安全的延迟初始化
         private static readonly Lazy<DataCollector> _instance = new Lazy<DataCollector>(() => new DataCollector());
         public static DataCollector Instance => _instance.Value;
 
-        // ================= 采集组件 =================
-        private readonly KeyboardCollector _keyboard;   // 键盘点击计数
-        private readonly ClipboardCollector _clipboard; // 剪贴板动作监听
-        private int _clipboardCountInInterval = 0;      // 内存中的增量计数（当前时间段内的复制次数）
-        private DateTime _lastClipboardTime = DateTime.MinValue; // 防止重复触发的防抖变量
+        // --- 核心组件 ---
+        private readonly QuantifyDbContext _db;
+        private readonly AppSettings _settings;
+        private readonly System.Timers.Timer _coreTimer;
 
-        private readonly ForegroundCollector _foreground; // 前台窗口追踪
-        private readonly AFKCollector _afk;             // 挂机状态判定
-        private readonly DataRepository _repo;          // 数据库操作仓库
+        // --- 控制器引用 ---
+        private readonly SystemStateController _systemStateCtrl;
+        private readonly ForegroundController _foregroundCtrl;
+        private readonly KeyboardController _keyboardCtrl;
+        private readonly CopyController _copyCtrl;
 
-        // ================= 控制变量 =================
-        private readonly System.Timers.Timer _coreTimer; // 1秒一次的核心轮询定时器
-        private long _currentSessionId;                  // 当前运行会话的 ID
-        private int _logIntervalSeconds = 30;           // 默认每30秒将增量数据落库一次
-        private int _secondsCounter = 0;                // 累加秒数计数器
+        // --- 状态追踪 ---
+        private DateTime _lastFlushTime = DateTime.Now;
+        private bool _isDisposed = false;
 
-        // ================= 状态追踪变量 (用于判断是否切换了窗口) =================
-        private string _lastStateType = "None";          // Active 或 AFK
-        private string _lastProcessName = "";            // 上一个进程名
-        private string _lastWindowTitle = "";            // 上一个窗口标题
-        private string _lastActivityType = "General";    // 追踪上一个活动所属的类别（如 Development）
-        private DateTime _lastStateStartTime = DateTime.Now; // 当前状态开始的时间
-
-        // ================= 增量计数变量 =================
-        private int _lastKeyCountAtLastLog = 0;         // 上次记录时的键盘总数
-        private DateTime _lastLogTime = DateTime.Now;   // 上次落库的时间点
-
-        /// <summary>
-        /// 私有构造函数：初始化所有组件并配置剪贴板防抖逻辑
-        /// </summary>
         private DataCollector()
         {
-            var dbService = new SQLiteDataService();
-            _repo = new DataRepository(dbService.ConnectionString);
+            // 1. 初始化物理数据库（确保文件和表结构存在）
+            // 这样可以防止 EF Core 在表还没创建时就尝试访问
+            var dbInitializer = new SQLiteDataService();
 
-            _keyboard = new KeyboardCollector();
-            _foreground = new ForegroundCollector();
-            _clipboard = new ClipboardCollector();
+            // 2. 加载配置（实际建议通过 SettingsManager 从本地 Json 加载）
+            _settings = new AppSettings();
 
-            // 订阅剪贴板事件
-            _clipboard.OnClipboardChanged += () =>
-            {
-                // 防抖逻辑：500毫秒内的多次触发（如某些软件的机制）视为同一次复制
-                if ((DateTime.Now - _lastClipboardTime).TotalMilliseconds > 500)
-                {
-                    _clipboardCountInInterval++;
-                    _lastClipboardTime = DateTime.Now;
-                }
-            };
+            // 3. 初始化数据库上下文
+            _db = new QuantifyDbContext();
 
-            _afk = new AFKCollector();
+            // 4. 初始化系统状态控制器 (处理开机/Session/AFK)
+            // 将设置中的 AFK 超时时间传入
+            _systemStateCtrl = new SystemStateController(_db, TimeSpan.FromSeconds(_settings.AFKTimeoutSeconds));
 
-            RefreshSettings(); // 加载配置信息
+            // 关键：强制执行一次 SaveChanges，确保初始 Session 获得数据库 ID
+            // 防止后续 TypingLog 等由于外键 ID 为 0 而报错
+            _db.SaveChanges();
 
-            // 初始化核心定时器，每 1000 毫秒（1秒）执行一次状态检查
-            _coreTimer = new System.Timers.Timer(1000);
+            // 5. 获取当前已持久化的 Session 对象
+            var initialSession = _systemStateCtrl.GetCurrentSession();
+
+            // 6. 初始化 Repository 体系
+            var activityRepo = new ActivityLogRepository(_db);
+            var processRepo = new ProcessInfoRepository(_db);
+            var typingRepo = new TypingLogRepository(_db);
+            var copyRepo = new CopyLogRepository(_db);
+            var matcher = new CategoryMatcher(_db);
+
+            // 7. 初始化功能控制器
+            _foregroundCtrl = new ForegroundController(activityRepo, processRepo, matcher);
+            _keyboardCtrl = new KeyboardController(typingRepo, initialSession);
+            _copyCtrl = new CopyController(copyRepo, initialSession);
+
+            // 8. 配置核心定时器（每秒/每几秒巡检一次）
+            _coreTimer = new System.Timers.Timer(_settings.CoreTickIntervalMs);
             _coreTimer.Elapsed += OnCoreTick;
         }
 
         /// <summary>
-        /// 从设置文件中刷新落库频率等配置
-        /// </summary>
-        public void RefreshSettings()
-        {
-            var settings = SelfTracker.Setting.AppSettings.Load();
-            _logIntervalSeconds = settings.LogIntervalSeconds;
-            _secondsCounter = 0;
-        }
-
-        /// <summary>
-        /// 启动采集逻辑：开启会话并启动所有监听钩子
+        /// 启动采集任务
         /// </summary>
         public void Start()
         {
-            // 在数据库中创建新的会话记录并获取 ID
-            _currentSessionId = _repo.StartSession();
-
-            _keyboard.Start();   // 安装键盘钩子
-            _clipboard.Start();  // 启动剪贴板窗口钩子
-            _coreTimer.Start();  // 开启秒表轮询
-
-            _lastStateStartTime = DateTime.Now;
-            _lastLogTime = DateTime.Now;
+            _keyboardCtrl.Start();
+            _copyCtrl.Start();
+            _coreTimer.Start();
         }
 
         /// <summary>
-        /// 每秒执行一次的逻辑：检测用户是否走开，或者是否切换了软件
+        /// 核心巡检周期：处理状态切换、窗口采集、定时入库
         /// </summary>
         private void OnCoreTick(object sender, ElapsedEventArgs e)
         {
-            var idleTime = _afk.IdleTime;
-            var fgInfo = _foreground.GetCurrentInfo();
-
-            // --- 1. 状态基本判定 ---
-            string currentType = idleTime.TotalMinutes >= 1 ? "AFK" : "Active";
-            string currentProcess = (currentType == "AFK") ? "Idle" : (fgInfo?.ProcessName ?? "Unknown");
-            string currentTitle = (currentType == "AFK") ? "User AFK" : (fgInfo?.WindowTitle ?? "");
-
-            // --- 2. 核心修改：动态确认 ActivityType ---
-            string currentActivityType;
-            if (currentType == "AFK")
+            try
             {
-                currentActivityType = "AFK";
-            }
-            else
-            {
-                // 尝试从缓存映射中获取用户定义的类型（例如 "devenv" -> "Coding"）
-                // 如果用户还没在 UI 页面分类，则暂时标记为 "General"
-                if (!_categoryCache.TryGetValue(currentProcess, out var mappedType))
-                {
-                    currentActivityType = "General";
-                }
-                else
-                {
-                    currentActivityType = mappedType;
-                }
-            }
+                // A. 检查并更新系统状态 (AFK检测/电源状态)
+                _systemStateCtrl.CheckUserState();
 
-            // --- 3. 检测状态切换（软件切换或 AFK 切换） ---
-            // 逻辑：如果状态类型变了（Active<->AFK）或者进程变了，就认为是一次“账目结算”
-            if (currentType != _lastStateType || (currentType == "Active" && currentProcess != _lastProcessName))
-            {
-                if (_lastStateType != "None")
-                {
-                    // 结算旧状态的时长
-                    LogStateTransition(_lastStateType, _lastProcessName, _lastWindowTitle, _lastActivityType, _lastStateStartTime, DateTime.Now);
+                // B. 获取当前最新的 Session (可能在 CheckUserState 中已切换)
+                var currentSession = _systemStateCtrl.GetCurrentSession();
 
-                    // 结算旧状态期间的生产力数据
-                    LogProductivity();
-                    _secondsCounter = 0;
+                // C. 同步 Session 给子控制器
+                _keyboardCtrl.SetCurrentSession(currentSession);
+                _copyCtrl.SetCurrentSession(currentSession);
+
+                // D. 窗口采集：仅在用户“活跃使用”时频繁采集
+                if (currentSession.Type == SystemStateType.ActiveUsing)
+                {
+                    // 注意：CaptureCurrentActivity 内部应包含 SaveChanges 或在这里统一保存
+                    _foregroundCtrl.CaptureCurrentActivity(currentSession);
                 }
 
-                // 更新状态追踪变量，为下一段计时做准备
-                _lastStateType = currentType;
-                _lastProcessName = currentProcess;
-                _lastWindowTitle = currentTitle;
-                _lastActivityType = currentActivityType; // 存储本次匹配到的类型
-                _lastStateStartTime = DateTime.Now;
+                // E. 生产力数据定时冲刷（根据 AppSettings 配置的秒数）
+                if ((DateTime.Now - _lastFlushTime).TotalSeconds >= _settings.LogIntervalSeconds)
+                {
+                    FlushProductivityData();
+                }
             }
-
-            // --- 4. 增量定时落库逻辑 ---
-            // 即使窗口没切换，每隔 30 秒也要存一次按键数，防止程序崩溃丢数据
-            _secondsCounter++;
-            if (_secondsCounter >= _logIntervalSeconds)
+            catch (Exception ex)
             {
-                LogProductivity();
-                _secondsCounter = 0;
+                // 建议增加日志记录，防止定时器线程异常崩溃
+                System.Diagnostics.Debug.WriteLine($"DataCollector Tick Error: {ex.Message}");
             }
         }
 
         /// <summary>
-        /// 将状态切换记录（活动日志或挂机日志）存入对应的数据库表
+        /// 批量将内存中的打字、复制等统计数据写入数据库
         /// </summary>
-        private void LogStateTransition(string type, string process, string title, string actType, DateTime start, DateTime end)
+        public void FlushProductivityData()
         {
-            // 忽略小于 1 秒的瞬间切换，减少数据库噪音
-            if ((end - start).TotalSeconds < 1) return;
+            lock (_db) // 简单的线程锁，防止 Hook 线程与定时器线程竞争 DbContext
+            {
+                // 调用各个控制器的 Flush 方法，将累加的 keyCount 等存入 Repository
+                _keyboardCtrl.Flush();
+                _copyCtrl.Flush();
 
-            if (type == "AFK")
-            {
-                _repo.InsertAfk(new AfkLog
-                {
-                    StartTime = start,
-                    EndTime = end,
-                    SessionId = (int)_currentSessionId
-                });
+                // 统一持久化到磁盘
+                _db.SaveChanges();
             }
-            else
-            {
-                _repo.InsertActivity(new ActivityLog
-                {
-                    ProcessName = process,
-                    WindowTitle = title,
-                    StartTime = start,
-                    EndTime = end,
-                    Duration = (int)(end - start).TotalSeconds,
-                    SessionId = (int)_currentSessionId,
-                    ActivityType = actType
-                });
-            }
+            _lastFlushTime = DateTime.Now;
         }
 
         /// <summary>
-        /// 记录生产力数据（按键数和复制数）
-        /// </summary>
-        private void LogProductivity()
-        {
-            int currentKeys = _keyboard.KeyCount;
-            int keyDiff = currentKeys - _lastKeyCountAtLastLog; // 计算自上次记录以来的增量
-            int copyDiff = _clipboardCountInInterval;        // 获取当前的复制次数增量
-            DateTime now = DateTime.Now;
-
-            // 只有产生有效数据时才写入数据库，节省空间
-            if (keyDiff > 0 || copyDiff > 0)
-            {
-                _repo.InsertProductivity(new ProductivityCount
-                {
-                    Keystrokes = keyDiff,
-                    CopyCount = copyDiff,
-                    SessionId = (int)_currentSessionId,
-                    PeriodStart = _lastLogTime,
-                    PeriodSeconds = (int)(now - _lastLogTime).TotalSeconds
-                });
-
-                // 更新偏移量，并将内存计数清零
-                _lastKeyCountAtLastLog = currentKeys;
-                _clipboardCountInInterval = 0;
-            }
-            _lastLogTime = now;
-        }
-
-        /// <summary>
-        /// 【公开方法】强制立即将内存中所有未保存的数据写入数据库。
-        /// 用于程序关闭或用户点击“同步”按钮时。
-        /// </summary>
-        public void ForceLogToDb()
-        {
-            lock (this) // 线程锁，防止与定时器 OnCoreTick 产生冲突
-            {
-                LogProductivity();
-
-                DateTime now = DateTime.Now;
-                if (_lastStateType != "None")
-                {
-                    LogStateTransition(_lastStateType, _lastProcessName, _lastWindowTitle, _lastActivityType, _lastStateStartTime, now);
-                }
-
-                _lastStateStartTime = now;
-                _secondsCounter = 0; // 重置定时器计数
-            }
-        }
-
-        /// <summary>
-        /// 停止采集：结清所有账目并注销系统钩子
+        /// 停止采集并安全释放
         /// </summary>
         public void Stop()
         {
-            _coreTimer.Stop();
+            // 1. 停止定时器，防止在关闭过程中再次触发 OnCoreTick
+            _coreTimer?.Stop();
 
-            // 记录最后一段状态
-            LogStateTransition(_lastStateType, _lastProcessName, _lastWindowTitle, _lastActivityType, _lastStateStartTime, DateTime.Now);
-            LogProductivity();
+            // 2. 【关键】瞬间冲刷最后一次内存数据
+            // 这会将 KeyboardController 和 CopyController 内存里的计数器转换成实体并 Add 到 DbContext
+            FlushProductivityData();
 
-            // 在数据库中标记 Session 结束
-            _repo.UpdateSessionEnd(_currentSessionId);
+            // 3. 停止各个子控制器（注销钩子等）
+            _keyboardCtrl?.Stop();
+            _copyCtrl?.Stop();
+            _systemStateCtrl?.Dispose();
 
-            _keyboard?.Dispose();
-            // 剪贴板监听器无需 dispose，因为它依赖于 HwndSource 的生命周期
+            // 4. 最后的持久化：确保所有 Add 进去的记录真正写入磁盘文件
+            try
+            {
+                lock (_db)
+                {
+                    _db.SaveChanges();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"关闭时保存失败: {ex.Message}");
+            }
         }
 
-
-        #region 分类
-
-        // 在 DataCollector 类中添加规则缓存
-        private Dictionary<string, string> _categoryCache = new Dictionary<string, string>();
-
-        // 在构造函数或 Start 方法中加载规则
-        public void LoadRules()
+        public void Dispose()
         {
-            _categoryCache = _repo.GetAllCategoryRules();
+            if (!_isDisposed)
+            {
+                Stop();
+                _db?.Dispose();
+                _isDisposed = true;
+            }
         }
-
-        #endregion
     }
 }
-

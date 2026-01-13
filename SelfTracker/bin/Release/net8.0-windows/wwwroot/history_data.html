@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>历史数据分析</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        /* 定义 CSS 变量，方便 C# 动态修改 */
+        :root {
+            --primary-color: #4e73df;
+            --text-main: #2c3e50;
+            --bg-card: white;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
+            background: transparent;
+            padding: 12px;
+            color: var(--text-main);
+            transition: color 0.3s ease; /* 颜色过渡效果 */
+        }
+
+        .header {
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+            .header h1 {
+                font-size: 18px;
+                color: var(--text-main);
+            }
+
+        .date-selector {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .date-group {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+            .date-group label {
+                font-size: 12px;
+                color: #666;
+            }
+
+            .date-group input[type="date"] {
+                padding: 4px 8px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                font-size: 12px;
+                outline: none;
+            }
+
+        .btn-query {
+            padding: 5px 16px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: 6px;
+            padding: 0 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 48px;
+        }
+
+        .stat-info {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: #5a5a5a;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-main);
+            font-family: 'Segoe UI', Consolas, sans-serif;
+        }
+
+        .chart-container {
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .chart-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .chart-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .controls-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2px;
+            background: #f0f2f5;
+            padding: 3px;
+            border-radius: 4px;
+        }
+
+        .btn-toggle {
+            padding: 4px 10px;
+            background: transparent;
+            border: none;
+            border-radius: 3px;
+            font-size: 11px;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+            .btn-toggle.active {
+                background: white;
+                color: var(--primary-color);
+                font-weight: 600;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            }
+
+        #mainChart {
+            width: 100%;
+            height: 350px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 历史分析</h1>
+            <div class="date-selector">
+                <div class="date-group">
+                    <label>起始</label>
+                    <input type="date" id="startDate">
+                </div>
+                <div class="date-group">
+                    <label>结束</label>
+                    <input type="date" id="endDate">
+                </div>
+                <button class="btn-query" onclick="loadData()">查询</button>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-info">
+                    <span class="stat-icon">⌨️</span>
+                    <span class="stat-label">总打字数</span>
+                </div>
+                <div class="stat-value" id="totalKeystrokes">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-info">
+                    <span class="stat-icon">📋</span>
+                    <span class="stat-label">总复制数</span>
+                </div>
+                <div class="stat-value" id="totalCopies">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-info">
+                    <span class="stat-icon">⏰</span>
+                    <span class="stat-label">使用中</span>
+                </div>
+                <div class="stat-value" id="totalActiveTime">0h</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-info">
+                    <span class="stat-icon">💤</span>
+                    <span class="stat-label">离开时长</span>
+                </div>
+                <div class="stat-value" id="totalAfkTime">0h</div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-controls">
+                <div class="chart-title" id="chartTitle">打字数量变化趋势</div>
+                <div class="controls-group">
+                    <div class="btn-group" id="dataTypeGroup"></div>
+                    <div class="btn-group" id="chartTypeGroup">
+                        <button class="btn-toggle active" onclick="switchChartType('line')">折线</button>
+                        <button class="btn-toggle" onclick="switchChartType('bar')">柱状</button>
+                    </div>
+                </div>
+            </div>
+            <div id="mainChart"></div>
+        </div>
+    </div>
+
+    <script>
+        const mainChart = echarts.init(document.getElementById('mainChart'));
+        let currentDataType = 'keystrokes';
+        let currentChartType = 'line';
+
+        let chartData = { dates: [] };
+
+        // 注意：这里的 color 默认为 null 或特定字符串，renderChart 时会动态读取主题色
+        let dataTypeConfig = {
+            keystrokes: { title: '打字数量变化趋势', color: 'auto', name: '打字数', unit: '' },
+            copies: { title: '复制次数变化趋势', color: '#4CAF50', name: '复制数', unit: '' },
+            active: { title: '总使用时长趋势', color: 'auto', name: '使用中', unit: 'h' },
+            afk: { title: '离开时长变化趋势', color: '#E91E63', name: '离开时间', unit: 'h' }
+        };
+
+        function updateCharts(jsonString) {
+            const result = JSON.parse(jsonString);
+            const daily = result.Daily;
+            const categories = result.Categories;
+
+            chartData.dates = daily.map(d => d.Date);
+            chartData.keystrokes = daily.map(d => d.Keystrokes);
+            chartData.copies = daily.map(d => d.CopyCount);
+            chartData.active = daily.map(d => d.ActiveTimeHours);
+            chartData.afk = daily.map(d => d.AfkTimeHours);
+
+            const uniqueCats = [...new Set(categories.map(c => c.Category))];
+
+            uniqueCats.forEach(catName => {
+                chartData[catName] = chartData.dates.map(date => {
+                    const found = categories.find(c => c.Date === date && c.Category === catName);
+                    return found ? found.DurationHours : 0;
+                });
+
+                if (!dataTypeConfig[catName]) {
+                    dataTypeConfig[catName] = {
+                        title: `${catName} 使用时长趋势`,
+                        color: 'auto', // 分类数据默认也跟随主题色，或者你可以保持 stringToColor
+                        name: catName,
+                        unit: 'h'
+                    };
+                }
+            });
+
+            document.getElementById('totalKeystrokes').textContent = chartData.keystrokes.reduce((a, b) => a + b, 0).toLocaleString();
+            document.getElementById('totalCopies').textContent = chartData.copies.reduce((a, b) => a + b, 0).toLocaleString();
+            document.getElementById('totalActiveTime').textContent = chartData.active.reduce((a, b) => a + b, 0).toFixed(1) + 'h';
+            document.getElementById('totalAfkTime').textContent = chartData.afk.reduce((a, b) => a + b, 0).toFixed(1) + 'h';
+
+            renderButtons(uniqueCats);
+            renderChart();
+        }
+
+        function renderButtons(categoryList) {
+            const group = document.getElementById('dataTypeGroup');
+            let html = `
+                    <button class="btn-toggle" onclick="switchDataType('keystrokes')">打字</button>
+                    <button class="btn-toggle" onclick="switchDataType('copies')">复制</button>
+                    <button class="btn-toggle" onclick="switchDataType('active')">使用</button>
+                    <button class="btn-toggle" onclick="switchDataType('afk')">离开</button>
+                `;
+
+            categoryList.forEach(cat => {
+                html += `<button class="btn-toggle" onclick="switchDataType('${cat}')">${cat}</button>`;
+            });
+
+            group.innerHTML = html;
+            updateBtnActive('dataTypeGroup', currentDataType);
+        }
+
+        // 核心渲染函数：增加了对 CSS 变量的动态读取
+        function renderChart() {
+            const conf = dataTypeConfig[currentDataType];
+            if (!conf || !chartData.dates.length) return;
+
+            // 动态获取当前 CSS 变量中的主题色
+            const themeColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
+            const activeColor = conf.color === 'auto' ? themeColor : conf.color;
+
+            const data = chartData[currentDataType];
+
+            mainChart.setOption({
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    formatter: function (params) {
+                        let res = params[0].name + '<br/>';
+                        params.forEach(item => {
+                            res += `${item.marker} ${item.seriesName}: <b>${item.value}</b> ${conf.unit}`;
+                        });
+                        return res;
+                    }
+                },
+                grid: { top: '10%', left: '3%', right: '4%', bottom: '3%', containLabel: true },
+                xAxis: {
+                    type: 'category',
+                    data: chartData.dates,
+                    axisLine: { lineStyle: { color: '#eee' } },
+                    axisLabel: { color: '#888' }
+                },
+                yAxis: {
+                    type: 'value',
+                    name: conf.unit,
+                    splitLine: { lineStyle: { type: 'dashed', color: '#f5f5f5' } },
+                    axisLabel: { color: '#888' }
+                },
+                series: [{
+                    name: conf.name,
+                    type: currentChartType,
+                    data: data,
+                    smooth: true,
+                    showSymbol: false,
+                    itemStyle: { color: activeColor },
+                    areaStyle: currentChartType === 'line' ? {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: activeColor + '44' },
+                            { offset: 1, color: activeColor + '00' }
+                        ])
+                    } : null
+                }]
+            }, true);
+        }
+
+        async function loadData() {
+            const start = document.getElementById('startDate').value;
+            const end = document.getElementById('endDate').value;
+            if (window.chrome?.webview?.hostObjects?.external) {
+                const bridge = window.chrome.webview.hostObjects.external;
+                await bridge.LoadHistoryData(start, end);
+            }
+        }
+
+        function switchDataType(type) {
+            currentDataType = type;
+            updateBtnActive('dataTypeGroup', type);
+            const titleElement = document.getElementById('chartTitle');
+            if (dataTypeConfig[type]) titleElement.textContent = dataTypeConfig[type].title;
+            renderChart();
+        }
+
+        function switchChartType(type) {
+            currentChartType = type;
+            updateBtnActive('chartTypeGroup', type === 'line' ? '折线' : '柱状');
+            renderChart();
+        }
+
+        function updateBtnActive(groupId, typeOrText) {
+            document.querySelectorAll(`#${groupId} .btn-toggle`).forEach(btn => {
+                const onclickAttr = btn.getAttribute('onclick') || "";
+                const match = onclickAttr.includes(`'${typeOrText}'`) || btn.textContent === typeOrText;
+                btn.classList.toggle('active', match);
+            });
+        }
+
+        function stringToColor(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const colors = ['#9c27b0', '#009688', '#ff5722', '#607d8b', '#3f51b5', '#8bc34a'];
+            return colors[Math.abs(hash) % colors.length];
+        }
+
+        window.onload = function () {
+            const today = new Date();
+            const start = new Date();
+            start.setDate(today.getDate() - 14);
+            document.getElementById('endDate').valueAsDate = today;
+            document.getElementById('startDate').valueAsDate = start;
+            setTimeout(loadData, 200);
+        };
+
+        window.onresize = () => mainChart.resize();
+    </script>
+</body>
+</html>
