@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SelfTracker - 个人时间追踪</title>
-    <link rel="stylesheet" href="glass.tokens.css">
-    <link rel="stylesheet" href="glass.roles.css">
+
+    <link rel="stylesheet" href="css/glass.tokens.css">
+    <link rel="stylesheet" href="css/glass.roles.css">
+    <link rel="stylesheet" href="css/common.css">
 
     <style>
         body {
@@ -18,18 +20,14 @@
             background-image: url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1000&q=80');
             background-size: cover;
             flex-direction: column;
-            background-color: #f8f9fc;
             font-family: 'Segoe UI', "Microsoft YaHei", sans-serif;
         }
 
-
-        /* overlay.roles.css 或者直接写在当前页面 */
         .overlay-transparent {
             background: transparent;
             backdrop-filter: none;
             -webkit-backdrop-filter: none;
         }
-
 
         .main-container {
             display: flex;
@@ -49,7 +47,6 @@
             -webkit-app-region: drag;
         }
 
-
         .logo-section {
             display: flex;
             align-items: center;
@@ -67,12 +64,11 @@
             color: var(--text-main);
         }
 
-        /* 导航与控制按钮区 */
         .nav-buttons {
             display: flex;
             align-items: center;
             gap: 15px;
-            -webkit-app-region: no-drag; 
+            -webkit-app-region: no-drag;
         }
 
         .page-switch-group {
@@ -80,7 +76,6 @@
             gap: 4px;
         }
 
-        /* 按钮样式微调 - 应用毛玻璃效果 */
         .nav-btn {
             padding: 8px 16px;
             font-size: 13px;
@@ -92,17 +87,17 @@
             transition: all 0.2s ease;
         }
 
-            .nav-btn:hover {
-                background: rgba(78, 115, 223, 0.08);
-                color: var(--primary-color);
-            }
+        .nav-btn:hover {
+            background: rgba(78, 115, 223, 0.08);
+            color: var(--primary-color);
+        }
 
-            .nav-btn.active {
-                background: var(--primary-color);
-                color: white;
-                font-weight: 600;
-                box-shadow: 0 2px 8px rgba(78, 115, 223, 0.3);
-            }
+        .nav-btn.active {
+            background: var(--primary-color);
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(78, 115, 223, 0.3);
+        }
 
         .window-controls {
             display: flex;
@@ -113,7 +108,6 @@
             border-left: 1px solid rgba(0,0,0,0.1);
         }
 
-        /* 窗口控制按钮 - 增强毛玻璃效果 */
         .win-btn {
             background: transparent;
             border: none;
@@ -129,10 +123,10 @@
             transition: all 0.2s ease;
         }
 
-            .win-btn:hover {
-                background: rgba(0, 0, 0, 0.08);
-                transform: scale(1.05);
-            }
+        .win-btn:hover {
+            background: rgba(0, 0, 0, 0.08);
+            transform: scale(1.05);
+        }
 
         .close-btn:hover {
             background: #e74a3b !important;
@@ -140,30 +134,13 @@
             box-shadow: 0 2px 8px rgba(231, 74, 59, 0.3);
         }
 
-        /* iframe 容器：高度 = 600 - 60 = 540px */
-        .iframe-container {
+        /* 内容容器（替代 iframe） */
+        .content-container {
             flex: 1;
             position: relative;
-            overflow: hidden;
-            background: transparent;
+            overflow: auto;
         }
 
-
-        .page-frame {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            border: none;
-            display: none;
-        }
-
-            .page-frame.active {
-                display: block;
-            }
-
-        /* 加载动画 */
         .loading {
             position: absolute;
             top: 50%;
@@ -173,109 +150,134 @@
             z-index: 50;
         }
 
-            .loading.show {
-                display: block;
-            }
+        .loading.show {
+            display: block;
+        }
     </style>
 </head>
 <body>
-    <div class="main-container">
-        <header class="top-nav overlay-transparent">
-            <div class="logo-section">
-                <span class="logo-icon">📊</span>
-                <span class="app-title">SelfTracker</span>
+<div class="main-container">
+    <header class="top-nav overlay-transparent">
+        <div class="logo-section">
+            <span class="logo-icon">📊</span>
+            <span class="app-title">SelfTracker</span>
+        </div>
+
+        <div class="nav-buttons">
+            <div class="page-switch-group">
+                <button class="nav-btn active" data-page="today">今日统计</button>
+                <button class="nav-btn" data-page="history">历史数据</button>
+                <button class="nav-btn" data-page="ruleengine">规则引擎</button>
+                <button class="nav-btn" data-page="settings">系统设置</button>
             </div>
-            <div class="nav-buttons">
-                <div class="page-switch-group">
-                    <button class="nav-btn active" data-page="today" onclick="switchPage('today')">今日统计</button>
-                    <button class="nav-btn" data-page="history" onclick="switchPage('history')">历史数据</button>
-                    <button class="nav-btn" data-page="category" onclick="switchPage('category')">分类管理</button>
-                    <button class="nav-btn" data-page="settings" onclick="switchPage('settings')">系统设置</button>
-                </div>
 
-                <div class="window-controls">
-                    <button class="win-btn min-btn" onclick="minimizeWindow()" title="最小化">—</button>
-                    <button class="win-btn close-btn" onclick="closeWindow()" title="关闭">✕</button>
-                </div>
+            <div class="window-controls">
+                <button class="win-btn" onclick="minimizeWindow()">—</button>
+                <button class="win-btn close-btn" onclick="closeWindow()">✕</button>
             </div>
-        </header>
+        </div>
+    </header>
 
-        <main class="iframe-container">
-            <div class="loading" id="loading">
-                <div class="spinner"></div>
-            </div>
-            <iframe id="todayFrame" class="page-frame active" src="today.html"></iframe>
-            <iframe id="historyFrame" class="page-frame" src="history_data.html"></iframe>
-            <iframe id="categoryFrame" class="page-frame" src="category-board.html"></iframe>
-            <iframe id="settingsFrame" class="page-frame" src="settings.html"></iframe>
-        </main>
-    </div>
+    <main class="content-container" id="appContent">
+        <div class="loading" id="loading"></div>
+    </main>
+</div>
 
-    <script src="bridge.js"></script>
-    <script>
+<script src="js/bridge.js"></script>
+<script src="js/echarts.min.js"></script>
+<script>
+    const content = document.getElementById('appContent');
+    const loading = document.getElementById('loading');
 
-        function switchPage(page) {
-            // 更新按钮状态
-            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-            const activeBtn = document.querySelector(`[data-page="${page}"]`);
-            if (activeBtn) activeBtn.classList.add('active');
+    let currentPageCSS = null;
+    let currentPageJS = null;
 
-            // 更新 iframe 显示
-            document.querySelectorAll('.page-frame').forEach(frame => frame.classList.remove('active'));
-            const activeFrame = document.getElementById(page + 'Frame');
-            if (activeFrame) activeFrame.classList.add('active');
+    async function loadPage(page) {
+        loading.classList.add('show');
+
+        // 移除之前页面的 CSS 和 JS
+        if (currentPageCSS) {
+            currentPageCSS.remove();
+            currentPageCSS = null;
+        }
+        if (currentPageJS) {
+            currentPageJS.remove();
+            currentPageJS = null;
         }
 
+        try {
+            // 加载 HTML
+            const htmlResp = await fetch(`pages/${page}.html`);
+            const html = await htmlResp.text();
+            content.innerHTML = html;
 
-        function minimizeWindow() {
-            // 调用 bridge.js 中封装好的方法
-            AppBridge.minimize();
+            // 动态加载页面特定的 CSS
+            const cssLink = document.createElement('link');
+            cssLink.rel = 'stylesheet';
+            cssLink.href = `css/${page}.css`;
+            document.head.appendChild(cssLink);
+            currentPageCSS = cssLink;
+
+            // 动态加载页面特定的 JS
+            const script = document.createElement('script');
+            script.src = `js/${page}.js`;
+            document.body.appendChild(script);
+            currentPageJS = script;
+
+        } catch (error) {
+            console.error('Failed to load page:', error);
+            content.innerHTML = '<div style="padding: 40px; text-align: center;">页面加载失败</div>';
         }
 
-        function closeWindow() {
-            // 调用 bridge.js 中封装好的方法
-            AppBridge.close();
-        }
+        loading.classList.remove('show');
+    }
 
-        // 4. 【核心修复】将函数挂载到 window，使 HTML 的 onclick 能够访问
-        window.switchPage = switchPage;
-        window.minimizeWindow = minimizeWindow;
-        window.closeWindow = closeWindow;
+    function switchPage(page) {
+        document.querySelectorAll('.nav-btn')
+            .forEach(btn => btn.classList.remove('active'));
 
-        window.addEventListener('message', function (event) {
-            if (event.data.type === 'themeChange') {
-                applyTheme(event.data.theme);
-                document.querySelectorAll('.page-frame').forEach(frame => {
-                    frame.contentWindow.postMessage({
-                        type: 'applyTheme',
-                        theme: event.data.theme
-                    }, '*');
-                });
-            } else if (event.data.type === 'switchPage') {
-                switchPage(event.data.page);
-            }
+        document.querySelector(`[data-page="${page}"]`)
+            ?.classList.add('active');
+
+        loadPage(page);
+    }
+
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            switchPage(btn.dataset.page);
         });
+    });
 
-        function applyTheme(theme) {
-            const root = document.documentElement;
-            const themes = {
-                blue: { primary: '#4e73df' },
-                red: { primary: '#e74a3b' },
-                cyan: { primary: '#36b9cc' },
-                green: { primary: '#1cc88a' },
-                orange: { primary: '#f6c23e' },
-                purple: { primary: '#6f42c1' }
-            };
-            if (themes[theme]) {
-                root.style.setProperty('--primary-color', themes[theme].primary);
-                localStorage.setItem('selectedTheme', theme);
-            }
+    function minimizeWindow() {
+        AppBridge.minimize();
+    }
+
+    function closeWindow() {
+        AppBridge.close();
+    }
+
+    function applyTheme(theme) {
+        const root = document.documentElement;
+        const themes = {
+            blue: '#4e73df',
+            red: '#e74a3b',
+            cyan: '#36b9cc',
+            green: '#1cc88a',
+            orange: '#f6c23e',
+            purple: '#6f42c1'
+        };
+
+        if (themes[theme]) {
+            root.style.setProperty('--primary-color', themes[theme]);
+            localStorage.setItem('selectedTheme', theme);
         }
+    }
 
-        window.addEventListener('load', () => {
-            const savedTheme = localStorage.getItem('selectedTheme') || 'blue';
-            applyTheme(savedTheme);
-        });
-    </script>
+    window.addEventListener('load', () => {
+        const savedTheme = localStorage.getItem('selectedTheme') || 'blue';
+        applyTheme(savedTheme);
+        loadPage('today');
+    });
+</script>
 </body>
 </html>

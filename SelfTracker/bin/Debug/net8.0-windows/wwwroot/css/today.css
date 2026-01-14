@@ -1,0 +1,173 @@
+/* today 页面样式 */
+
+.today-page {
+    padding: 24px;
+    height: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    overflow: hidden;
+}
+
+/* 顶部指标 */
+.top-stats-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+}
+
+.stat-mini-card {
+    padding: 16px;
+    border-radius: 16px;
+}
+
+.stat-mini-card.score-highlight * {
+    color: rgb(14, 1, 1) !important;
+}
+
+.stat-label {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.stat-value {
+    font-size: 30px;
+    font-weight: 800;
+}
+
+.stat-sub {
+    font-size: 12px;
+    opacity: 0.75;
+    margin-top: 6px;
+}
+
+/* 主内容 */
+.main-content-area {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 16px;
+    flex: 1;
+    min-height: 0;
+}
+
+/* 热力图 */
+.activity-map-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+}
+
+.map-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.row-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-top: 8px;
+}
+
+.time-blocks {
+    display: grid;
+    grid-template-columns: repeat(24, 1fr);
+    gap: 4px;
+}
+
+.block {
+    height: 32px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.block:hover {
+    background: rgba(0, 0, 0, 0.12);
+    transform: scale(1.05);
+}
+
+.time-axis {
+    margin-top: 8px;
+    display: grid;
+    grid-template-columns: repeat(24, 1fr);
+}
+
+.time-axis span {
+    grid-column: span 2;
+    text-align: center;
+    font-size: 10px;
+    color: rgba(0, 0, 0, 0.4);
+}
+
+/* 排行 */
+.category-rank-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+}
+
+.rank-item {
+    padding: 8px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.rank-item:hover {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(6px);
+    transform: translateX(4px);
+}
+
+.rank-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.progress-bg {
+    height: 10px;
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.6s ease;
+}
+
+.active-process-box {
+    margin-top: auto;
+    padding-top: 16px;
+}
+
+.process-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.process-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}

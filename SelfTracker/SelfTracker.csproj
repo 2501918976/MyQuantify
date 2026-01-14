@@ -12,41 +12,82 @@
   <ItemGroup>
     <None Remove="Res\863kp-8yn1t-001.ico" />
     <None Remove="Res\x6gyh-c5q12-001.ico" />
-    <None Remove="wwwroot\category-board.html" />
     <None Remove="wwwroot\components.css" />
-    <None Remove="wwwroot\glass.roles.css" />
-    <None Remove="wwwroot\glass.tokens.css" />
-    <None Remove="wwwroot\history_data.html" />
+    <None Remove="wwwroot\css\common.css" />
+    <None Remove="wwwroot\css\glass.roles.css" />
+    <None Remove="wwwroot\css\glass.tokens.css" />
+    <None Remove="wwwroot\css\history.css" />
+    <None Remove="wwwroot\css\ruleengine.css" />
+    <None Remove="wwwroot\css\settings.css" />
+    <None Remove="wwwroot\css\today.css" />
     <None Remove="wwwroot\index.html" />
+    <None Remove="wwwroot\js\bridge.js" />
+    <None Remove="wwwroot\js\echarts.min.js" />
+    <None Remove="wwwroot\js\history.js" />
+    <None Remove="wwwroot\js\ruleengine.js" />
+    <None Remove="wwwroot\js\settings.js" />
+    <None Remove="wwwroot\js\today.js" />
+    <None Remove="wwwroot\pages\history.html" />
+    <None Remove="wwwroot\pages\ruleengine.html" />
+    <None Remove="wwwroot\pages\settings.html" />
+    <None Remove="wwwroot\pages\today.html" />
     <None Remove="wwwroot\settings-specific.css" />
-    <None Remove="wwwroot\settings.html" />
-    <None Remove="wwwroot\today.html" />
     <None Remove="wwwroot\variables.css" />
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="wwwroot\category-board.html">
+    <EmbeddedResource Include="wwwroot\css\common.css">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="wwwroot\bridge.js">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Include="wwwroot\glass.roles.css">
+    <EmbeddedResource Include="wwwroot\css\glass.roles.css">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="wwwroot\glass.tokens.css">
+    <EmbeddedResource Include="wwwroot\css\glass.tokens.css">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="wwwroot\history_data.html">
+    <EmbeddedResource Include="wwwroot\css\history.css">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="wwwroot\css\ruleengine.css">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="wwwroot\css\settings.css">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="wwwroot\css\today.css">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
     <EmbeddedResource Include="wwwroot\index.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="wwwroot\settings.html">
+    <EmbeddedResource Include="wwwroot\js\bridge.js">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="wwwroot\today.html">
+    <EmbeddedResource Include="wwwroot\js\echarts.min.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="wwwroot\js\history.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="wwwroot\js\ruleengine.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="wwwroot\js\settings.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="wwwroot\js\today.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="wwwroot\pages\history.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="wwwroot\pages\ruleengine.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="wwwroot\pages\settings.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="wwwroot\pages\today.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
   </ItemGroup>

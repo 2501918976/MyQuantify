@@ -1,0 +1,37 @@
+<div class="rule-engine-page">
+    <aside class="sidebar-panel glass-strong glass-bordered">
+        <div class="panel-header">
+            <span>🔍 捕获队列</span>
+            <span class="refresh-btn" onclick="ruleEngine.reloadCapture()">🔄</span>
+        </div>
+        <div class="pending-list" id="pendingList">
+        </div>
+    </aside>
+
+    <main class="main-rule-area">
+        <div class="rule-toolbar glass-strong glass-bordered">
+            <span style="font-weight: 800">📏 自动化归类规则</span>
+            <button class="nav-btn active" style="padding: 6px 12px;" onclick="ruleEngine.openTagModal()">🏷️ 标签管理</button>
+        </div>
+
+        <div class="rule-table-container glass-superstrong glass-bordered">
+            <div class="rule-grid-header">
+                <span>进程特征</span><span>逻辑</span><span>窗口标题特征</span><span>匹配</span><span>分类</span><span></span>
+            </div>
+            <div class="rule-scroll-area" id="ruleList"
+                 ondragover="ruleEngine.onDragOver(event)"
+                 ondragleave="ruleEngine.onDragLeave(event)"
+                 ondrop="ruleEngine.onDrop(event)">
+            </div>
+        </div>
+    </main>
+</div>
+
+<div class="modal-overlay" id="catModal">
+    <div class="modal-content glass-strong glass-bordered">
+        <h3 style="margin-top:0">标签管理</h3>
+        <div id="catManagerList" style="max-height: 300px; overflow-y: auto; margin-bottom: 15px;"></div>
+        <button class="nav-btn active" style="width:100%; margin-bottom:8px" onclick="ruleEngine.addNewTag()">+ 新增分类</button>
+        <button class="nav-btn" style="width:100%" onclick="ruleEngine.closeTagModal()">关闭</button>
+    </div>
+</div>

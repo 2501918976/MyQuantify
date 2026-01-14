@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>规则引擎 - 全透明精致版</title>
+    <style>
+        :root {
+            --mica-bg: rgba(255, 255, 255, 0.15);
+            --mica-border: rgba(255, 255, 255, 0.25);
+            --accent: #0078d4;
+            --glass-blur: blur(30px) saturate(160%);
+        }
+
+        body {
+            width: 1000px;
+            height: 600px;
+            margin: 0;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .container {
+            width: 1000px;
+            height: 600px;
+            display: flex;
+            padding: 20px;
+            gap: 15px;
+            box-sizing: border-box;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--mica-border);
+            border-radius: 12px;
+        }
+
+        /* --- 面板样式 --- */
+        .panel {
+            background: var(--mica-bg);
+            border: 1px solid var(--mica-border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 240px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .sidebar-header {
+            padding: 12px;
+            font-weight: 800;
+            font-size: 13px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .pending-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .pending-item {
+            padding: 10px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.15);
+            margin-bottom: 8px;
+            font-size: 11px;
+            border: 1px solid rgba(255,255,255,0.1);
+            cursor: grab;
+            transition: 0.2s;
+        }
+
+            .pending-item:hover {
+                background: rgba(255,255,255,0.4);
+                border-color: #fff;
+            }
+
+        /* --- 主区域 --- */
+        .main-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toolbar {
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .rule-table-header {
+            display: grid;
+            grid-template-columns: 130px 60px 160px 100px 90px 40px;
+            gap: 8px;
+            padding: 0 15px;
+            font-size: 11px;
+            font-weight: 700;
+            color: rgba(0,0,0,0.4);
+        }
+
+        .rule-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 5px;
+        }
+
+            .rule-list.drag-over {
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 12px;
+            }
+
+        .rule-row {
+            display: grid;
+            grid-template-columns: 130px 60px 160px 100px 90px 40px;
+            gap: 8px;
+            padding: 6px 12px;
+            align-items: center;
+            background: rgba(255,255,255,0.12);
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        select, input {
+            width: 100%;
+            padding: 4px;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.2);
+            font-size: 11px;
+            background: rgba(255,255,255,0.1);
+            outline: none;
+            color: #1a1a1a;
+        }
+
+            select:focus, input:focus {
+                background: rgba(255,255,255,0.5);
+            }
+
+        .btn {
+            padding: 5px 12px;
+            border-radius: 6px;
+            border: none;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-ghost {
+            background: rgba(255,255,255,0.15);
+            color: #000;
+            border: 1px solid var(--mica-border);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .btn-danger {
+            background: none;
+            color: #e81123;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+            opacity: 0.4;
+        }
+
+            .btn-danger:hover {
+                opacity: 1;
+            }
+
+        /* --- 分类管理弹窗 --- */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.15);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .modal-content {
+            width: 200px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(25px) saturate(180%);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+        }
+
+        .cat-item {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 8px;
+        }
+
+            .cat-item input {
+                font-size: 10px;
+                padding: 3px;
+            }
+
+        .empty-tip {
+            text-align: center;
+            color: rgba(0,0,0,0.2);
+            font-size: 11px;
+            margin-top: 100px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <aside class="sidebar panel">
+            <div class="sidebar-header">
+                <span>捕获队列 (未分类)</span>
+                <span style="cursor:pointer; font-size:10px; color:var(--accent);" onclick="refreshCaptureList()">🔄 刷新</span>
+            </div>
+            <div class="pending-list" id="pendingList">
+            </div>
+        </aside>
+
+        <main class="main-area">
+            <div class="toolbar panel">
+                <span style="font-weight: 800; font-size: 13px;">规则管理</span>
+                <button class="btn btn-ghost" onclick="toggleModal(true)">🏷️ 标签管理</button>
+            </div>
+
+            <div class="rule-table-header">
+                <span>进程特征</span><span>逻辑</span><span>窗口特征</span><span>匹配方法</span><span>归属分类</span><span></span>
+            </div>
+
+            <div class="rule-list" id="ruleList" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+                <div class="empty-tip" id="emptyTip">拖拽左侧项到此处</div>
+            </div>
+        </main>
+    </div>
+
+    <div class="modal-overlay" id="catModal">
+        <div class="modal-content">
+            <h4 style="margin:0 0 12px 0; font-size:13px; text-align:center;">分类标签</h4>
+            <div id="catManagerList" style="max-height: 200px; overflow-y: auto; margin-bottom: 12px;">
+            </div>
+            <button class="btn btn-ghost" style="width:100%; margin-bottom:8px; font-size:10px;" onclick="addNewTag()">+ 新增</button>
+            <button class="btn btn-primary" style="width:100%; font-size:10px;" onclick="toggleModal(false)">确定</button>
+        </div>
+    </div>
+
+<script src="bridge.js"></script>
+<script>
+    let dragData = null;
+    let cachedCategories = [];
+
+    // ===== Bridge 调用统一封装 =====
+    async function callBridge(method, param = null) {
+        // 1. 尝试从当前窗口、父窗口、甚至顶级窗口获取 bridge
+        const bridge = window.chrome?.webview?.hostObjects?.bridge || 
+                    window.parent?.chrome?.webview?.hostObjects?.bridge ||
+                    window.top?.chrome?.webview?.hostObjects?.bridge;
+
+        if (!bridge) {
+            throw new Error("Bridge 未就绪，请稍后重试");
+        }
+
+        try {
+            if (param !== null) {
+                return await bridge[method](JSON.stringify(param));
+            } else {
+                return await bridge[method]();
+            }
+        } catch (e) {
+            // 如果报错“找不到元素”，通常是由于引用失效，打印更清晰的日志
+            console.error(`调用 ${method} 失败:`, e);
+            throw e;
+        }
+    }
+
+    // ===== 初始化 =====
+    window.onload = () => {
+        setTimeout(() => {
+            reloadAll().catch(err => console.error(err));
+        }, 200);
+    };
+
+    async function reloadAll() {
+        await refreshCategories();
+        await refreshRules();
+        await refreshCaptureList();
+    }
+
+    // ===== 未分类活动 =====
+    async function refreshCaptureList() {
+        const json = await callBridge("获取未分类的活动");
+        const list = JSON.parse(json);
+
+        const container = document.getElementById("pendingList");
+        container.innerHTML = list.length
+            ? list.map(item => `
+                <div class="pending-item"
+                     draggable="true"
+                     ondragstart="onDragStart(event,
+                        '${item.ProcessName.replace(/'/g, "\\'")}',
+                        '${(item.WindowTitle || "").replace(/'/g, "\\'")}')">
+                    <div style="font-weight:700">${item.ProcessName}</div>
+                    <div style="opacity:.6; white-space:nowrap; overflow:hidden;">
+                        ${item.WindowTitle || "无标题"}
+                    </div>
+                </div>
+            `).join("")
+            : `<div class="empty-tip">暂无未分类活动</div>`;
+    }
+
+    // ===== 分类管理 =====
+    async function refreshCategories() {
+        const json = await callBridge("获取所有分类");
+        cachedCategories = JSON.parse(json);
+
+        const container = document.getElementById("catManagerList");
+        container.innerHTML = cachedCategories.map(cat => `
+            <div class="cat-item">
+                <input value="${cat.CategoryName}"
+                       onchange="updateCategory(${cat.Id}, this.value)">
+                <button class="btn-danger"
+                        onclick="deleteCategory(${cat.Id})">×</button>
+            </div>
+        `).join("");
+    }
+
+    async function addNewTag() {
+        await callBridge("新增一个分类", {
+            CategoryName: "新分类",
+            ColorCode: "#0078d4"
+        });
+        await refreshCategories();
+        await refreshRules();
+    }
+
+    async function updateCategory(id, name) {
+        await callBridge("新增修改分类", {
+            Id: id,
+            CategoryName: name
+        });
+        await refreshCategories();
+        await refreshRules();
+    }
+
+    async function deleteCategory(id) {
+        if (!confirm("删除分类将同时删除其下所有规则，确定吗？")) return;
+        await callBridge("新增删除分类", { Id: id });
+        await reloadAll();
+    }
+
+    // ===== 规则管理 =====
+    async function refreshRules() {
+        const list = document.getElementById("ruleList");
+        list.innerHTML = "";
+
+        let hasRules = false;
+
+        cachedCategories.forEach(cat => {
+            (cat.CategoryRules || []).forEach(rule => {
+                hasRules = true;
+                appendRuleRow(rule);
+            });
+        });
+
+        if (!hasRules) {
+            list.innerHTML = `<div class="empty-tip" id="emptyTip">拖拽左侧项到此处</div>`;
+        }
+    }
+
+    function appendRuleRow(rule) {
+        document.getElementById("emptyTip")?.remove();
+
+        const row = document.createElement("div");
+        row.className = "rule-row";
+
+        row.innerHTML = `
+            <input value="${rule.ProcessName}"
+                   onchange="saveRule(${rule.Id}, this)">
+            <select onchange="saveRule(${rule.Id}, this)">
+                <option value="0" ${rule.LogicType === 0 ? "selected" : ""}>AND</option>
+                <option value="1" ${rule.LogicType === 1 ? "selected" : ""}>OR</option>
+                <option value="2" ${rule.LogicType === 2 ? "selected" : ""}>NOT</option>
+            </select>
+            <input value="${rule.TitleMatchValue || ""}"
+                   onchange="saveRule(${rule.Id}, this)">
+            <select onchange="saveRule(${rule.Id}, this)">
+                <option value="0" ${rule.TitleMatchType === 0 ? "selected" : ""}>全字</option>
+                <option value="1" ${rule.TitleMatchType === 1 ? "selected" : ""}>包含</option>
+                <option value="2" ${rule.TitleMatchType === 2 ? "selected" : ""}>正则</option>
+            </select>
+            <select onchange="saveRule(${rule.Id}, this)">
+                ${cachedCategories.map(c =>
+                    `<option value="${c.Id}" ${c.Id === rule.CategoryId ? "selected" : ""}>
+                        ${c.CategoryName}
+                    </option>`
+                ).join("")}
+            </select>
+            <button class="btn-danger" onclick="deleteRule(${rule.Id})">×</button>
+        `;
+
+        document.getElementById("ruleList").appendChild(row);
+    }
+
+    async function saveRule(id, el) {
+        const row = el.closest(".rule-row");
+        const inputs = row.querySelectorAll("input");
+        const selects = row.querySelectorAll("select");
+
+        await callBridge("修改一个规则", {
+            Id: id,
+            ProcessName: inputs[0].value,
+            LogicType: Number(selects[0].value),
+            TitleMatchValue: inputs[1].value,
+            TitleMatchType: Number(selects[1].value),
+            CategoryId: Number(selects[2].value),
+            IsEnabled: true
+        });
+    }
+
+    async function deleteRule(id) {
+        await callBridge("删除一个规则", { Id: id });
+        await reloadAll();
+    }
+
+    // ===== 拖拽 =====
+    function onDragStart(e, proc, title) {
+        dragData = { proc, title };
+    }
+
+    function onDragOver(e) {
+        e.preventDefault();
+        document.getElementById("ruleList").classList.add("drag-over");
+    }
+
+    function onDragLeave() {
+        document.getElementById("ruleList").classList.remove("drag-over");
+    }
+
+    async function onDrop(e) {
+        e.preventDefault();
+        document.getElementById("ruleList").classList.remove("drag-over");
+
+        if (!dragData) return;
+        if (cachedCategories.length === 0) {
+            alert("请先创建分类");
+            return;
+        }
+
+        await callBridge("新增一个规则", {
+            ProcessName: dragData.proc,
+            TitleMatchValue: dragData.title,
+            CategoryId: cachedCategories[0].Id,
+            LogicType: 0,
+            TitleMatchType: 1,
+            IsEnabled: true
+        });
+
+        dragData = null;
+        await reloadAll();
+    }
+
+    function toggleModal(show) {
+        document.getElementById("catModal").style.display = show ? "flex" : "none";
+    }
+</script>
+
+
+</body>
+</html>

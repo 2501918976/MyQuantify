@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SelfTracker")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8ddb703501ef3067dcf07967bb94b03fa7a14c6d")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+bac7a6f9cd8f8730c1af81528f5ea1bd969c9eae")]
 [assembly: System.Reflection.AssemblyProductAttribute("SelfTracker")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SelfTracker")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
